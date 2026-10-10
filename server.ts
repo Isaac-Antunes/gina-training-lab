@@ -80,6 +80,11 @@ app.use(['/api/train', '/api/challenges/solve'], sessionRateLimitMiddleware);
 
 // Initialize Google GenAI with recommended telemetry header
 const apiKey = process.env.GEMINI_API_KEY || '';
+const AI_NOT_CONFIGURED = {
+  code: 'ai_not_configured',
+  error: 'IA desativada: GEMINI_API_KEY não está configurada. Preencha a chave em .env.local e reinicie o servidor, ou use o modo manual.',
+  canFallbackManual: true,
+};
 const ai = apiKey ? new GoogleGenAI({
   apiKey,
   httpOptions: {
@@ -154,10 +159,7 @@ app.post('/api/train/gina-response', async (req: Request, res: Response) => {
     }
 
     if (!apiKey) {
-      return res.status(503).json({
-        error: 'Chave GEMINI_API_KEY não configurada no servidor. Configure no painel de Secrets.',
-        canFallbackManual: true,
-      });
+      return res.status(503).json(AI_NOT_CONFIGURED);
     }
 
     const systemInstruction = `Você é a Gina, mascote e agente de CRM & Lifecycle para pequeno varejo do Gina Training Lab, produto criado por Isaac Antunes.
@@ -307,10 +309,7 @@ app.post('/api/train/evaluate-practice', async (req: Request, res: Response) => 
     }
 
     if (!apiKey) {
-      return res.status(503).json({
-        error: 'Chave GEMINI_API_KEY não configurada no servidor. Permita revisão manual.',
-        canFallbackManual: true,
-      });
+      return res.status(503).json(AI_NOT_CONFIGURED);
     }
 
     const systemInstruction = `Você é o avaliador pedagógico supervisionado do Gina Training Lab.
@@ -539,10 +538,9 @@ app.post('/api/challenges/solve', async (req: Request, res: Response) => {
 
     if (!apiKey) {
       return res.status(503).json({
+        ...AI_NOT_CONFIGURED,
         blocked: true,
-        error: 'Chave GEMINI_API_KEY não configurada no servidor.',
         errorCategory: 'infra_blocked',
-        canFallbackManual: true,
       });
     }
 

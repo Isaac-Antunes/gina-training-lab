@@ -44,7 +44,10 @@ test('starts without an API key and permits manual evaluation', async () => {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario: {} }),
     });
     assert.equal(response.status, 503);
-    assert.equal((await response.json()).canFallbackManual, true);
+    const body = await response.json();
+    assert.equal(body.canFallbackManual, true);
+    assert.equal(body.code, 'ai_not_configured');
+    assert.match(body.error, /\.env\.local/);
   });
 });
 

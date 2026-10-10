@@ -50,6 +50,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
   const [ginaResponse, setGinaResponse] = useState<GinaStructuredResponse | null>(null);
   const [isGinaLoading, setIsGinaLoading] = useState<boolean>(false);
   const [ginaError, setGinaError] = useState<string | null>(null);
+  const [ginaAiOff, setGinaAiOff] = useState<boolean>(false);
   const [isManualGina, setIsManualGina] = useState<boolean>(false);
 
   // Practice Mode state
@@ -57,6 +58,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
   const [evaluation, setEvaluation] = useState<RubricEvaluation | null>(null);
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
   const [evalError, setEvalError] = useState<string | null>(null);
+  const [evalAiOff, setEvalAiOff] = useState<boolean>(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
   const [isCalibrationMode, setIsCalibrationMode] = useState<boolean>(false);
   const [revealedCriteria, setRevealedCriteria] = useState<boolean>(false);
@@ -111,6 +113,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
     if (isGinaLoading) return;
     setIsGinaLoading(true);
     setGinaError(null);
+    setGinaAiOff(false);
     setIsManualGina(false);
 
     const controller = new AbortController();
@@ -126,6 +129,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
+        if (errorData.code === 'ai_not_configured') setGinaAiOff(true);
         throw new Error(errorData.error || errorData.details || `Erro do servidor (${res.status})`);
       }
 
@@ -172,6 +176,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
 
     setIsEvaluating(true);
     setEvalError(null);
+    setEvalAiOff(false);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
@@ -189,6 +194,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
+        if (errorData.code === 'ai_not_configured') setEvalAiOff(true);
         throw new Error(errorData.error || errorData.details || `Erro do servidor (${res.status})`);
       }
 
@@ -609,25 +615,29 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <strong className="font-bold text-amber-900 block text-sm">
-                    Serviço temporariamente indisponível no backend
+                    {ginaAiOff ? 'IA desativada (modo manual)' : 'Serviço temporariamente indisponível no backend'}
                   </strong>
                   <p className="text-amber-800 leading-relaxed font-mono text-[11px] bg-white/70 p-2 rounded-lg border border-amber-200 break-all">
                     {ginaError}
                   </p>
                   <p className="text-[11px] text-amber-900/80">
-                    O erro não foi mascarado. Você pode tentar novamente com backoff automático ou carregar o gabarito manual referencial para continuar seus estudos.
+                    {ginaAiOff
+                      ? 'Sem chave configurada, a consulta à Gina não está disponível. Carregue o gabarito manual referencial para continuar seus estudos.'
+                      : 'O erro não foi mascarado. Você pode tentar novamente com backoff automático ou carregar o gabarito manual referencial para continuar seus estudos.'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                <button
-                  onClick={fetchGinaResponse}
-                  disabled={isGinaLoading}
-                  className="px-4 py-2 rounded-full bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
-                >
-                  <RotateCw className="w-3.5 h-3.5" />
-                  <span>Tentar novamente</span>
-                </button>
+                {!ginaAiOff && (
+                  <button
+                    onClick={fetchGinaResponse}
+                    disabled={isGinaLoading}
+                    className="px-4 py-2 rounded-full bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                    <span>Tentar novamente</span>
+                  </button>
+                )}
                 <button
                   onClick={useBenchmarkGina}
                   className="px-4 py-2 rounded-full bg-white text-amber-950 border border-amber-300 font-semibold text-xs hover:bg-amber-100 transition-colors cursor-pointer"
@@ -886,19 +896,23 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
           {evalError && !isEvaluating && (
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="space-y-0.5">
-                <strong>Falha na avaliação:</strong>
+                <strong>{evalAiOff ? 'IA desativada (modo manual):' : 'Falha na avaliação:'}</strong>
                 <p className="font-mono text-[11px]">{evalError}</p>
                 <p className="text-[11px] text-amber-900/75">
-                  O erro não foi mascarado. Você pode tentar novamente ou realizar a avaliação manual na rubrica.
+                  {evalAiOff
+                    ? 'Sem chave configurada, a avaliação automática não está disponível. Use a avaliação manual na rubrica.'
+                    : 'O erro não foi mascarado. Você pode tentar novamente ou realizar a avaliação manual na rubrica.'}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={evaluateUserPractice}
-                  className="px-4 py-1.5 rounded-full bg-amber-700 text-white font-bold hover:bg-amber-800 transition-colors"
-                >
-                  Tentar novamente
-                </button>
+                {!evalAiOff && (
+                  <button
+                    onClick={evaluateUserPractice}
+                    className="px-4 py-1.5 rounded-full bg-amber-700 text-white font-bold hover:bg-amber-800 transition-colors"
+                  >
+                    Tentar novamente
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setIsCalibrationMode(false);
