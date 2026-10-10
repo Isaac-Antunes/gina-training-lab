@@ -1,0 +1,6 @@
+{
+  "name": "Gina Training Lab",
+  "description": "Laboratório supervisionado de treinamento de agente de CRM e lifecycle para pequeno varejo, criado por Isaac Antunes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

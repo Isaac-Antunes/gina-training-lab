@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bagel Fat One", system-ui, sans-serif;
+  --font-sans: "Onest", system-ui, -apple-system, sans-serif;
+  --color-forest: #1E6B2E;
+  --color-forest-dark: #14502a;
+  --color-forest-deep: #061f16;
+  --color-lime: #7FC453;
+  --color-lime-light: #9fdc6e;
+  --color-cream: #f5f3ed;
+  --color-cream-light: #fffdf7;
+  --color-canvas: #eef6e6;
+}
+
+body {
+  font-family: 'Onest', system-ui, -apple-system, sans-serif;
+  background-color: #eef6e6;
+  color: #061f16;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display {
+  font-family: 'Bagel Fat One', cursive, system-ui;
+}
+
+/* Original Gina animations from design */
+.float {
+  animation: float 4.5s ease-in-out infinite;
+  transform-origin: 100px 100px;
+}
+.blink {
+  animation: blink 5s infinite;
+  transform-origin: 97px 95px;
+}
+.orbit {
+  animation: orbit 2.4s linear infinite;
+  transform-origin: 100px 100px;
+}
+.ping-pulse {
+  animation: ping 1.8s ease-out infinite;
+  transform-origin: 100px 100px;
+}
+.dot {
+  animation: dot 1.2s infinite;
+}
+.d1 {
+  animation-delay: 0.2s;
+}
+.d2 {
+  animation-delay: 0.4s;
+}
+.conf {
+  animation: conf 2.6s ease-in-out infinite;
+}
+.c1 {
+  animation-delay: 0.4s;
+}
+.c2 {
+  animation-delay: 0.8s;
+}
+.zz {
+  animation: zz 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ping {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+
+@keyframes dot {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+
+@keyframes conf {
+  0%, 100% { opacity: 0; translate: 0 6px; }
+  30%, 70% { opacity: 1; translate: 0 -4px; }
+}
+
+@keyframes zz {
+  0%, 100% { opacity: 0.3; translate: 0 4px; }
+  50% { opacity: 1; translate: 4px -4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

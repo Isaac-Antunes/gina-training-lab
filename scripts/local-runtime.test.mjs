@@ -1,0 +1,79 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { unzipSync } from 'fflate';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+let nextPort = 43931;
+
+async function withServer(envText, run) {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'gina-runtime-'));
+  await writeFile(path.join(cwd, '.env.local'), envText);
+  const env = { ...process.env, NODE_ENV: 'production', PORT: String(nextPort++) };
+  delete env.GEMINI_API_KEY;
+  const child = spawn(process.execPath, ['--import', import.meta.resolve('tsx'), path.join(root, 'server.ts')], {
+    cwd, env, stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let output = '';
+  try {
+    const url = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error(`Startup timed out: ${output}`)), 10000);
+      child.once('exit', (code) => { clearTimeout(timeout); reject(new Error(`Server exited ${code}: ${output}`)); });
+      child.stderr.on('data', (chunk) => { output += chunk; });
+      child.stdout.on('data', (chunk) => {
+        output += chunk;
+        const match = output.match(/http:\/\/localhost:(\d+)/);
+        if (match) { clearTimeout(timeout); resolve(match[0]); }
+      });
+    });
+    await run(url);
+  } finally {
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+    if (child.exitCode === null) { child.kill(); await exited; }
+    await rm(cwd, { recursive: true, force: true });
+  }
+}
+
+test('starts without an API key and permits manual evaluation', async () => {
+  await withServer('', async (url) => {
+    const response = await fetch(`${url}/api/train/gina-response`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario: {} }),
+    });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).canFallbackManual, true);
+  });
+});
+
+test('loads .env.local without exposing the API key in health output', async () => {
+  await withServer('GEMINI_API_KEY=local-test-key-never-sent\n', async (url) => {
+    const response = await fetch(`${url}/api/health`);
+    assert.equal(response.status, 200);
+    const text = await response.text();
+    assert.equal(JSON.parse(text).aiConfigured, true);
+    assert.equal(text.includes('local-test-key-never-sent'), false);
+  });
+});
+
+test('unknown API routes return JSON rather than downloading the SPA as HTML', async () => {
+  await withServer('', async (url) => {
+    const response = await fetch(`${url}/api/not-a-route`);
+    assert.equal(response.status, 404);
+    assert.match(response.headers.get('content-type'), /application\/json/);
+  });
+});
+
+test('download endpoint returns an actual source ZIP', async () => {
+  await withServer('', async (url) => {
+    const response = await fetch(`${url}/api/download-zip`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /application\/zip/);
+    const archive = unzipSync(new Uint8Array(await response.arrayBuffer()));
+    assert.ok(archive['server.ts']);
+    assert.ok(archive['README.md']);
+    assert.equal(archive['.env.local'], undefined);
+  });
+});
