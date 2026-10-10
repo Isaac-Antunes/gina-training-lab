@@ -17,7 +17,8 @@
     "pretest": "node scripts/package-source.mjs",
     "test": "node --import tsx scripts/run-challenges.ts && node --import tsx --test scripts/*.test.mjs",
     "package:source": "node scripts/package-source.mjs",
-    "playground": "node --import tsx scripts/playground.ts"
+    "playground": "node --import tsx scripts/playground.ts",
+    "scan": "node scripts/scan-injection.mjs"
   },
   "engines": { "node": ">=22.12.0" },
   "dependencies": {
