@@ -11,6 +11,9 @@ import {
 } from './src/utils/contextEngineering';
 import { COMPOUND_CHALLENGES } from './src/data/challengesFixtures';
 import { SCENARIOS } from './src/data/scenarios';
+import { createSalesforceReader } from './src/integrations/salesforce/client';
+import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from './src/integrations/salesforce/demoData';
+import { buildGinaCustomers } from './src/integrations/salesforce/toGina';
 import { buildEvaluatorMessage, buildGinaScenarioMessage, EVALUATOR_SYSTEM_PROMPT, GINA_SYSTEM_PROMPT } from './src/utils/ginaPrompts';
 
 const findScenario = (id: unknown) => SCENARIOS.find((s) => s.id === id);
@@ -451,7 +454,52 @@ app.get('/api/download-zip', (_req: Request, res: Response) => {
 
 // Endpoint: Gina Solver para Desafios Compostos
 app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', aiConfigured: Boolean(apiKey), mode: apiKey ? 'ai' : 'manual' });
+  res.json({
+    status: 'ok',
+    aiConfigured: Boolean(apiKey),
+    mode: apiKey ? 'ai' : 'manual',
+    salesforceConfigured: salesforceConfigured(),
+  });
+});
+
+// Gina na Salesforce: só leitura. "demo" usa a base fictícia; "org" lê a org configurada em .env.local.
+const salesforceConfigured = () =>
+  Boolean(process.env.SALESFORCE_INSTANCE_URL && process.env.SALESFORCE_ACCESS_TOKEN);
+
+app.get('/api/salesforce/customers', async (req: Request, res: Response) => {
+  const source = req.query.source === 'org' ? 'org' : 'demo';
+  try {
+    if (source === 'demo') {
+      return res.json({
+        source,
+        referenceDate: DEMO_TODAY.toISOString().slice(0, 10),
+        customers: buildGinaCustomers(DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY),
+      });
+    }
+
+    if (!salesforceConfigured()) {
+      return res.status(503).json({
+        code: 'salesforce_not_configured',
+        error: 'Salesforce não configurada: preencha SALESFORCE_INSTANCE_URL e SALESFORCE_ACCESS_TOKEN em .env.local e reinicie o servidor.',
+      });
+    }
+
+    const reader = createSalesforceReader({
+      instanceUrl: process.env.SALESFORCE_INSTANCE_URL!,
+      accessToken: process.env.SALESFORCE_ACCESS_TOKEN!,
+      apiVersion: process.env.SALESFORCE_API_VERSION || undefined,
+    });
+    const today = new Date();
+    const [contacts, orders] = await Promise.all([reader.listContacts(), reader.listOrders()]);
+    return res.json({
+      source,
+      referenceDate: today.toISOString().slice(0, 10),
+      customers: buildGinaCustomers(contacts, orders, today),
+    });
+  } catch (error: any) {
+    console.error('Erro ao ler a Salesforce:', error?.message);
+    return res.status(502).json({ code: 'salesforce_error', error: error?.message || 'Falha ao ler a Salesforce.' });
+  }
 });
 
 // IMPORTANTE: Isolamento Lógico de Testes - Purga qualquer tentativa de inclusão de gabarito.

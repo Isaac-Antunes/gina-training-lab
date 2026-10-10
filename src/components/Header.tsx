@@ -2,7 +2,7 @@ import React from 'react';
 import { GinaCharacter } from './GinaCharacter';
 import { Download } from 'lucide-react';
 
-export type NavTab = 'train' | 'scenarios' | 'challenges' | 'history' | 'method';
+export type NavTab = 'train' | 'scenarios' | 'challenges' | 'salesforce' | 'history' | 'method';
 
 interface HeaderProps {
   currentTab: NavTab;
@@ -67,6 +67,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#7FC453] text-[#061f16]">
               Suíte
             </span>
+          </button>
+          <button
+            onClick={() => onTabChange('salesforce')}
+            className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
+              currentTab === 'salesforce'
+                ? 'bg-[#1E6B2E] text-[#f5f3ed] shadow-xs'
+                : 'text-[#061f16]/80 hover:text-[#1E6B2E] hover:bg-[#14502a]/5'
+            }`}
+          >
+            Salesforce
           </button>
           <button
             onClick={() => onTabChange('history')}

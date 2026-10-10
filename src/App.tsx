@@ -5,6 +5,7 @@ import { ScenariosView } from './components/ScenariosView';
 import { HistoryView } from './components/HistoryView';
 import { MethodView } from './components/MethodView';
 import { ChallengesView } from './components/ChallengesView';
+import { SalesforceView } from './components/SalesforceView';
 import { GinaCharacter } from './components/GinaCharacter';
 import { GinaSpeechBubble } from './components/GinaSpeechBubble';
 import { SCENARIOS } from './data/scenarios';
@@ -136,6 +137,7 @@ export default function App() {
 
         {/* Tab 3: Desafios & Runner */}
         {currentTab === 'challenges' && <ChallengesView />}
+        {currentTab === 'salesforce' && <SalesforceView />}
 
         {/* Tab 4: Histórico */}
         {currentTab === 'history' && (

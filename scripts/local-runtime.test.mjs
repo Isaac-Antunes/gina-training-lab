@@ -122,6 +122,31 @@ test('challenge budget starts empty when the server starts', async () => {
   });
 });
 
+test('Salesforce demo mode returns Gina decisions without any org', async () => {
+  await withServer('', async (url) => {
+    const body = await (await fetch(`${url}/api/salesforce/customers`)).json();
+    assert.equal(body.source, 'demo');
+    assert.equal(body.referenceDate, '2026-10-10');
+    const actions = Object.fromEntries(body.customers.map((c) => [c.name, c.facts.recommendedAction]));
+    assert.equal(actions['Marina Souza'], 'friendly_nudge');
+    assert.equal(actions['Ana Lima'], 'no_message');
+    assert.equal(actions['Roberto Alves'], 'concierge_human');
+    assert.equal(actions['Helena Costa'], 'dormancy_rest');
+    assert.equal(actions['Carlos Nunes'], 'refuse_spam');
+    assert.equal(actions['Fernanda Dias'], 'dormancy_rest');
+  });
+});
+
+test('Salesforce org mode explains what is missing when not configured', async () => {
+  await withServer('', async (url) => {
+    const response = await fetch(`${url}/api/salesforce/customers?source=org`);
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.code, 'salesforce_not_configured');
+    assert.match(body.error, /\.env\.local/);
+  });
+});
+
 test('download endpoint returns an actual source ZIP', async () => {
   await withServer('', async (url) => {
     const response = await fetch(`${url}/api/download-zip`);
