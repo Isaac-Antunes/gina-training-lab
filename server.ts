@@ -413,9 +413,9 @@ app.post('/api/train/evaluate-practice', async (req: Request, res: Response) => 
 });
 
 // Server-side strict budget and circuit breaker
-// Preserves real consumption state: 6 calls consumed, no new real calls in this session
+// Teto por processo: 6 chamadas reais ao Gemini, contadas a partir de zero a cada início do servidor
 const MAX_SERVER_GEMINI_CALLS = 6;
-let serverGeminiCallsConsumed = 6;
+let serverGeminiCallsConsumed = 0;
 let consecutiveFailuresCount = 0;
 let isCircuitBreakerOpen = false;
 

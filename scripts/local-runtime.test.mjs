@@ -113,6 +113,15 @@ test('challenge solver accepts a known id without trusting client facts', async 
   });
 });
 
+test('challenge budget starts empty when the server starts', async () => {
+  await withServer('', async (url) => {
+    const status = await (await fetch(`${url}/api/challenges/status`)).json();
+    assert.equal(status.budgetConsumed, 0);
+    assert.equal(status.budgetExhausted, false);
+    assert.equal(status.circuitBreakerOpen, false);
+  });
+});
+
 test('download endpoint returns an actual source ZIP', async () => {
   await withServer('', async (url) => {
     const response = await fetch(`${url}/api/download-zip`);

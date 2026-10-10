@@ -60,13 +60,13 @@ import {
 export const SUITE_VERSION = 'v1.2.0-eval-suite';
 export const LAST_RUN_STORAGE_KEY = 'gina_challenges_last_run_v1';
 
-// Strict rate-limiting / budget tracker: 6 calls consumed in real run
-let geminiCallsCounter = 6;
+// Teto por sessão do navegador: 6 chamadas reais, contadas a partir de zero
+let geminiCallsCounter = 0;
 export const MAX_GEMINI_CALLS_BUDGET = 6;
 
 // Runner circuit breaker state
-let consecutiveRunnerFailures = 2; // Real run hit consecutive infra limits
-let isRunnerCircuitBreakerTripped = true;
+let consecutiveRunnerFailures = 0;
+let isRunnerCircuitBreakerTripped = false;
 
 export function getGeminiCallsCount(): number {
   return geminiCallsCounter;
