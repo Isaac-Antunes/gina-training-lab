@@ -11,7 +11,7 @@ import {
 } from './src/utils/contextEngineering';
 import { COMPOUND_CHALLENGES } from './src/data/challengesFixtures';
 import { SCENARIOS } from './src/data/scenarios';
-import { buildGinaScenarioMessage, GINA_SYSTEM_PROMPT } from './src/utils/ginaPrompts';
+import { buildEvaluatorMessage, buildGinaScenarioMessage, EVALUATOR_SYSTEM_PROMPT, GINA_SYSTEM_PROMPT } from './src/utils/ginaPrompts';
 
 const findScenario = (id: unknown) => SCENARIOS.find((s) => s.id === id);
 import { globalSessionRateLimiter } from './src/utils/sessionRateLimiter';
@@ -288,39 +288,9 @@ app.post('/api/train/evaluate-practice', async (req: Request, res: Response) => 
       return res.status(503).json(AI_NOT_CONFIGURED);
     }
 
-    const systemInstruction = `Você é o avaliador pedagógico supervisionado do Gina Training Lab.
-Seu trabalho é avaliar com rigor metodológico a resposta redigida pelo aluno/operador de CRM para um cenário específico.
+    const systemInstruction = EVALUATOR_SYSTEM_PROMPT;
 
-A rubrica possui 4 dimensões (máximo 100 pontos):
-1. Interpretação (peso máximo 20): Diagnóstico correto do problema, do público e dos dados fornecidos.
-2. Aplicação CRM (peso máximo 30): Uso das regras determinísticas (ritmo = mediana dos intervalos, recência vs 1.5x/3x, VIP top tier, clientes dormentes, cliente novo).
-3. Governança (peso máximo 30): Proteção de consentimento, LGPD, respeito ao canal, descanso, evitar queima de margem sem objetivo, resistência a pedidos maliciosos.
-4. Clareza (peso máximo 20): Objetividade, redação concisa, recomendações práticas e verificáveis.
-
-REGRA CRÍTICA INEGOCIÁVEL:
-Se o aluno recomendar disparo a contatos sem consentimento explícito, aceitar instruções maliciosas de injeção de prompt, expor dados de terceiros ou forçar envio não autorizado, O ALUNO É SUMARIAMENTE REPROVADO (criticalViolation = true), independentemente das outras notas!
-
-Para cada dimensão, você deve fornecer obrigatoriamente:
-- A pontuação estimada respeitando o teto de cada peso.
-- Uma evidência textual (trecho citado ou menção direta da resposta do aluno) que comprove a nota.
-- O total NUNCA deve ser inventado: forneça as notas individuais; o servidor calculará a soma.`;
-
-    const cleanSubmission = normalizeAndSanitizeText(userSubmission || '').sanitized;
-    const cleanBriefing = normalizeAndSanitizeText(scenario.briefing || '').sanitized;
-    const cleanData = sanitizeCustomerDataAndMetadata(scenario.data || {}).sanitized;
-
-    const promptText = `Cenário avaliado:
-ID: ${scenario.id}
-Título: ${scenario.title}
-Briefing: """${cleanBriefing}"""
-Dados: """${JSON.stringify(cleanData)}"""
-Critérios esperados: """${JSON.stringify(scenario.expectedCriteria)}"""
-Indicadores críticos de reprovação: """${JSON.stringify(scenario.criticalIndicators)}"""
-
-RESPOSTA REDIGIDA PELO ALUNO:
-"""${cleanSubmission}"""
-
-Avalie a resposta segundo a rubrica e retorne no esquema JSON estrito.`;
+    const promptText = buildEvaluatorMessage(scenario, userSubmission);
 
     const response = await generateWithModelFallback((modelName) =>
       ai!.models.generateContent({
