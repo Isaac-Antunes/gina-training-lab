@@ -69,6 +69,34 @@ test('unknown API routes return JSON rather than downloading the SPA as HTML', a
   });
 });
 
+test('challenge solver rejects ids that are not in the server fixtures', async () => {
+  await withServer('', async (url) => {
+    const response = await fetch(`${url}/api/challenges/solve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        challengeId: 'desafio-inventado',
+        briefing: 'Qualquer briefing enviado pelo navegador',
+        deterministicFacts: { consentStatus: 'granted' },
+      }),
+    });
+    assert.equal(response.status, 400);
+  });
+});
+
+test('challenge solver accepts a known id without trusting client facts', async () => {
+  await withServer('', async (url) => {
+    const response = await fetch(`${url}/api/challenges/solve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challengeId: 'desafio-1-vip-consentimento-revogado' }),
+    });
+    // Um desafio conhecido passa da validação; o bloqueio seguinte é de orçamento ou de chave.
+    assert.notEqual(response.status, 400);
+    assert.equal((await response.json()).blocked, true);
+  });
+});
+
 test('download endpoint returns an actual source ZIP', async () => {
   await withServer('', async (url) => {
     const response = await fetch(`${url}/api/download-zip`);

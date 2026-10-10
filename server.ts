@@ -9,6 +9,7 @@ import {
   sanitizeCustomerDataAndMetadata,
   sanitizeOutboundMessage,
 } from './src/utils/contextEngineering';
+import { COMPOUND_CHALLENGES } from './src/data/challengesFixtures';
 import { globalSessionRateLimiter } from './src/utils/sessionRateLimiter';
 
 // Local overrides precede .env; injected environment variables keep priority.
@@ -512,10 +513,14 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Fatos determinísticos pré-calculados pelo motor de CRM são injetados como fatos.
 app.post('/api/challenges/solve', async (req: Request, res: Response) => {
   try {
-    const { challengeId, briefing, customerData, deterministicFacts } = req.body;
-    if (!challengeId || !briefing) {
-      return res.status(400).json({ error: 'Desafio ou briefing não informado.' });
+    // Briefing, dados e fatos vêm da fixture do servidor. O que o navegador mandar nesses
+    // campos é ignorado: os fatos são tratados como inquestionáveis pelo modelo.
+    const { challengeId } = req.body;
+    const challenge = COMPOUND_CHALLENGES.find((c) => c.id === challengeId);
+    if (!challenge) {
+      return res.status(400).json({ error: 'Desafio não encontrado.' });
     }
+    const { briefing, customerData, deterministicFacts } = challenge;
 
     // 1. Verificação estrita de orçamento do servidor
     if (serverGeminiCallsConsumed >= MAX_SERVER_GEMINI_CALLS) {
