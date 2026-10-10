@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 *.zip
+
+# Configuração local do Claude Code (caminhos desta máquina)
+.claude/
