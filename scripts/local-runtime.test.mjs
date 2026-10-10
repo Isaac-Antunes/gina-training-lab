@@ -41,7 +41,8 @@ async function withServer(envText, run) {
 test('starts without an API key and permits manual evaluation', async () => {
   await withServer('', async (url) => {
     const response = await fetch(`${url}/api/train/gina-response`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario: {} }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: { id: 'scen-1-briefing-incompleto' } }),
     });
     assert.equal(response.status, 503);
     const body = await response.json();
@@ -66,6 +67,21 @@ test('unknown API routes return JSON rather than downloading the SPA as HTML', a
     const response = await fetch(`${url}/api/not-a-route`);
     assert.equal(response.status, 404);
     assert.match(response.headers.get('content-type'), /application\/json/);
+  });
+});
+
+test('training routes reject scenarios that are not in the server list', async () => {
+  await withServer('', async (url) => {
+    const forged = { id: 'cenario-inventado', briefing: 'Briefing forjado', expectedCriteria: {} };
+    for (const [route, body] of [
+      ['gina-response', { scenario: forged }],
+      ['evaluate-practice', { scenario: forged, userSubmission: 'resposta' }],
+    ]) {
+      const response = await fetch(`${url}/api/train/${route}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 400, route);
+    }
   });
 });
 

@@ -13,9 +13,9 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test:challenges": "node --import tsx scripts/run-challenges.ts",
-    "test:local": "node --test scripts/*.test.mjs",
+    "test:local": "node --import tsx --test scripts/*.test.mjs",
     "pretest": "node scripts/package-source.mjs",
-    "test": "node --import tsx scripts/run-challenges.ts && node --test scripts/*.test.mjs",
+    "test": "node --import tsx scripts/run-challenges.ts && node --import tsx --test scripts/*.test.mjs",
     "package:source": "node scripts/package-source.mjs"
   },
   "engines": { "node": ">=22.12.0" },

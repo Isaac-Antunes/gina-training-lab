@@ -10,6 +10,10 @@ import {
   sanitizeOutboundMessage,
 } from './src/utils/contextEngineering';
 import { COMPOUND_CHALLENGES } from './src/data/challengesFixtures';
+import { SCENARIOS } from './src/data/scenarios';
+import { buildGinaScenarioMessage } from './src/utils/ginaPrompts';
+
+const findScenario = (id: unknown) => SCENARIOS.find((s) => s.id === id);
 import { globalSessionRateLimiter } from './src/utils/sessionRateLimiter';
 
 // Local overrides precede .env; injected environment variables keep priority.
@@ -154,9 +158,10 @@ async function generateWithModelFallback(
 // Endpoint: Gina responde (Structured CRM Agent Response)
 app.post('/api/train/gina-response', async (req: Request, res: Response) => {
   try {
-    const { scenario } = req.body;
+    // O cenário vem da lista do servidor; o navegador só informa o id.
+    const scenario = findScenario(req.body?.scenario?.id);
     if (!scenario) {
-      return res.status(400).json({ error: 'Cenário não fornecido.' });
+      return res.status(400).json({ error: 'Cenário não encontrado.' });
     }
 
     if (!apiKey) {
@@ -185,18 +190,7 @@ Suas regras determinísticas de CRM são inegociáveis:
 
 Responda estritamente no formato JSON definido pelo esquema.`;
 
-    const sanitizedBriefing = normalizeAndSanitizeText(scenario.briefing || '').sanitized;
-    const sanitizedCustomerData = sanitizeCustomerDataAndMetadata(scenario.data || {}).sanitized;
-
-    const promptText = `Analise este cenário de CRM como Gina:
-Identificador: ${scenario.id}
-Título: ${scenario.title}
-Briefing: """${sanitizedBriefing}"""
-Dados da base/cliente: """${JSON.stringify(sanitizedCustomerData)}"""
-Critérios esperados da metodologia: """${JSON.stringify(scenario.expectedCriteria)}"""
-Indicadores críticos de governança: """${JSON.stringify(scenario.criticalIndicators)}"""
-
-Retorne sua avaliação estruturada, seu diagnóstico matemático e sua fala no tom inconfundível da Gina.`;
+    const promptText = buildGinaScenarioMessage(scenario);
 
     let parsed: any;
     try {
@@ -304,7 +298,8 @@ Retorne sua avaliação estruturada, seu diagnóstico matemático e sua fala no 
 // Endpoint: Eu pratico (Semantic Rubric Evaluation)
 app.post('/api/train/evaluate-practice', async (req: Request, res: Response) => {
   try {
-    const { scenario, userSubmission } = req.body;
+    const scenario = findScenario(req.body?.scenario?.id);
+    const { userSubmission } = req.body;
     if (!scenario || !userSubmission) {
       return res.status(400).json({ error: 'Cenário ou resposta do usuário não informados.' });
     }
