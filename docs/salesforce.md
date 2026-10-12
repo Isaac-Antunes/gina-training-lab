@@ -46,7 +46,15 @@ Hospitalidade não é varejo, mas a lógica é a mesma: o hóspede que voltava a
 4. **Pedir aprovação**: a única escrita permitida é criar uma `Task` para o dono revisar. Nenhuma mensagem é enviada pela Gina.
 5. **Medir**: separar um grupo de controle (holdout) antes de qualquer campanha, como manda a regra 10.
 
-O acesso é feito por um aplicativo conectado criado pelo próprio Isaac na org; as credenciais ficam em `.env.local` e nunca no código.
+O acesso usa o login do Salesforce CLI, sem aplicativo conectado; as credenciais ficam em `.env.local` e nunca no código.
+
+### Conectar uma org (Developer Edition)
+
+1. `sf org login web --alias gina-dev --browser chrome` e autorizar no navegador.
+2. `npm run sf:env`: copia a URL e o token do CLI para o `.env.local`, sem imprimir o token. O token expira com a sessão; se a tela der 401, rode de novo.
+3. `npm run dev` e abrir a aba **Salesforce → Minha org**.
+
+O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/describe`) e só pede esses. Sem `HasOptedOutOfEmail` ou sem os campos da Gina, a leitura continua; o consentimento fica "ausente" e o envio é bloqueado. Contatos sem pedidos ficam fora do ranking VIP.
 
 ## O que torna o projeto desejado
 
@@ -57,7 +65,7 @@ O acesso é feito por um aplicativo conectado criado pelo próprio Isaac na org;
 
 ## Próximos passos
 
-1. Criar uma Developer Edition gratuita (Isaac) e importar os 6 cenários da Gina como Contact + Order.
-2. Escrever o conector de leitura e um teste com dados falsos, sem rede.
-3. Tela "Gina na Salesforce" no lab: lista de clientes, decisão, botão "criar tarefa para o dono".
+1. ~~Criar uma Developer Edition gratuita e ligar a tela à org.~~ Feito em 12/10/2026 (20 contatos de exemplo, nenhum pedido).
+2. Importar os clientes de demonstração da Gina como Contact + Order na org (escrita: só com aprovação do Isaac).
+3. Botão "criar tarefa para o dono" na tela "Gina na Salesforce".
 4. Depois, repetir no Coral Cloud e gravar um vídeo curto para o Behance.

@@ -49,7 +49,7 @@ export function buildGinaCustomers(
     purchasesByContact.set(order.BillToContactId, list);
   }
 
-  const ranking = contacts.map((contact) => {
+  const totals = contacts.map((contact) => {
     const purchases = purchasesByContact.get(contact.Id) || [];
     return {
       id: contact.Id,
@@ -58,12 +58,18 @@ export function buildGinaCustomers(
       totalSpending: purchases.reduce((sum, o) => sum + (o.TotalAmount || 0), 0),
     };
   });
+  // O ranking VIP compara só quem comprou; sem isso, contatos com zero pedidos
+  // empatam no topo e viram "VIP" numa org com poucos pedidos.
+  const buyers = totals.filter((customer) => customer.orderCount > 0);
 
   return contacts.map((contact, index) => {
     const purchases = purchasesByContact.get(contact.Id) || [];
     const orderDates = purchases.map((o) => o.EffectiveDate).sort();
-    const { totalSpending, orderCount } = ranking[index];
-    const vip = classifyCustomerVipTier({ targetCustomerId: contact.Id, customers: ranking });
+    const { totalSpending, orderCount } = totals[index];
+    const vip =
+      orderCount > 0
+        ? classifyCustomerVipTier({ targetCustomerId: contact.Id, customers: buyers })
+        : { isVip: false, reason: 'Sem compras registradas: fora do ranking VIP.' };
     const { consent, consentSource } = readConsent(contact);
 
     return {

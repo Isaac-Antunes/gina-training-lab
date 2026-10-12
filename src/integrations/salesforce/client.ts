@@ -11,8 +11,12 @@ export interface SalesforceConnection {
 
 const DEFAULT_API_VERSION = 'v62.0';
 
-const CONTACT_FIELDS = ['Id', 'Name', 'HasOptedOutOfEmail'];
-const GINA_CONTACT_FIELDS = ['Gina_WhatsApp_Consent__c', 'Gina_Ignored_Contacts__c'];
+const CONTACT_FIELDS = ['Id', 'Name'];
+/**
+ * Campos que podem não existir ou não estar visíveis para o usuário da org
+ * (permissão de campo). Só entram na consulta se a descrição do objeto os listar.
+ */
+const OPTIONAL_CONTACT_FIELDS = ['HasOptedOutOfEmail', 'Gina_WhatsApp_Consent__c', 'Gina_Ignored_Contacts__c'];
 const ORDER_FIELDS = ['Id', 'BillToContactId', 'EffectiveDate', 'TotalAmount', 'Status'];
 
 /**
@@ -32,7 +36,7 @@ export function createSalesforceReader(connection: SalesforceConnection) {
     throw new Error('accessToken da Salesforce não informado.');
   }
 
-  async function get<T>(pathAndQuery: string): Promise<SoqlResponse<T>> {
+  async function get<T>(pathAndQuery: string): Promise<T> {
     const response = await fetchImpl(new URL(pathAndQuery, base), {
       method: 'GET',
       headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
@@ -41,26 +45,33 @@ export function createSalesforceReader(connection: SalesforceConnection) {
       // Não repassa o corpo: pode conter detalhes da org.
       throw new Error(`Salesforce respondeu ${response.status} na consulta.`);
     }
-    return (await response.json()) as SoqlResponse<T>;
+    return (await response.json()) as T;
   }
 
   async function query<T>(soql: string): Promise<T[]> {
     const records: T[] = [];
-    let page = await get<T>(`/services/data/${apiVersion}/query?q=${encodeURIComponent(soql)}`);
+    let page = await get<SoqlResponse<T>>(`/services/data/${apiVersion}/query?q=${encodeURIComponent(soql)}`);
     records.push(...page.records);
     while (!page.done && page.nextRecordsUrl) {
-      page = await get<T>(page.nextRecordsUrl);
+      page = await get<SoqlResponse<T>>(page.nextRecordsUrl);
       records.push(...page.records);
     }
     return records;
   }
 
+  /** Nomes dos campos que o usuário da org consegue ler no objeto. */
+  async function readableFields(sobject: string): Promise<Set<string>> {
+    const describe = await get<{ fields: { name: string }[] }>(`/services/data/${apiVersion}/sobjects/${sobject}/describe`);
+    return new Set(describe.fields.map((field) => field.name));
+  }
+
   return {
     query,
 
-    /** Lê os contatos. Com withGinaFields, inclui os dois campos personalizados opcionais. */
-    listContacts(withGinaFields = false): Promise<SalesforceContact[]> {
-      const fields = withGinaFields ? [...CONTACT_FIELDS, ...GINA_CONTACT_FIELDS] : CONTACT_FIELDS;
+    /** Lê os contatos, com os campos opcionais que a org expõe para este usuário. */
+    async listContacts(): Promise<SalesforceContact[]> {
+      const readable = await readableFields('Contact');
+      const fields = [...CONTACT_FIELDS, ...OPTIONAL_CONTACT_FIELDS.filter((name) => readable.has(name))];
       return query<SalesforceContact>(`SELECT ${fields.join(', ')} FROM Contact ORDER BY Name`);
     },
 

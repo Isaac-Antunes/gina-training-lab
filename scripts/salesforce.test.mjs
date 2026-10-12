@@ -19,6 +19,7 @@ function fakeFetch(pages) {
 
 test('reader only issues authenticated GET queries and follows pagination', async () => {
   const { impl, calls } = fakeFetch([
+    { fields: [{ name: 'Id' }, { name: 'Name' }, { name: 'HasOptedOutOfEmail' }] },
     { totalSize: 2, done: false, nextRecordsUrl: '/services/data/v62.0/query/01gNEXT-2000', records: [{ Id: '003A', Name: 'Ana' }] },
     { totalSize: 2, done: true, records: [{ Id: '003B', Name: 'Bruno' }] },
   ]);
@@ -26,14 +27,29 @@ test('reader only issues authenticated GET queries and follows pagination', asyn
   const contacts = await reader.listContacts();
 
   assert.deepEqual(contacts.map((c) => c.Name), ['Ana', 'Bruno']);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
   for (const call of calls) {
     assert.equal(call.init.method, 'GET');
     assert.equal(call.init.headers.Authorization, 'Bearer token-de-teste');
     assert.ok(call.url.startsWith(INSTANCE));
   }
-  assert.match(decodeURIComponent(calls[0].url), /SELECT Id, Name, HasOptedOutOfEmail FROM Contact/);
-  assert.ok(calls[1].url.endsWith('/query/01gNEXT-2000'));
+  assert.ok(calls[0].url.endsWith('/sobjects/Contact/describe'));
+  assert.match(decodeURIComponent(calls[1].url), /SELECT Id, Name, HasOptedOutOfEmail FROM Contact/);
+  assert.ok(calls[2].url.endsWith('/query/01gNEXT-2000'));
+});
+
+test('reader only selects optional contact fields the org lets the user read', async () => {
+  const { impl, calls } = fakeFetch([
+    { fields: [{ name: 'Id' }, { name: 'Name' }, { name: 'Gina_WhatsApp_Consent__c' }] },
+    { totalSize: 0, done: true, records: [] },
+  ]);
+  const reader = createSalesforceReader({ instanceUrl: INSTANCE, accessToken: 't', fetchImpl: impl });
+  await reader.listContacts();
+
+  const soql = decodeURIComponent(calls[1].url);
+  assert.match(soql, /SELECT Id, Name, Gina_WhatsApp_Consent__c FROM Contact/);
+  assert.equal(soql.includes('HasOptedOutOfEmail'), false);
+  assert.equal(soql.includes('Gina_Ignored_Contacts__c'), false);
 });
 
 test('reader refuses plain http and missing tokens, and hides error bodies', async () => {
@@ -95,4 +111,22 @@ test('Salesforce records become Gina decisions through the deterministic rules',
 
   assert.equal(byName.Davi.consent, 'missing');
   assert.equal(byName.Davi.facts.recommendedAction, 'refuse_spam');
+});
+
+test('contacts without purchases never become VIP', () => {
+  const today = new Date('2026-10-10T12:00:00Z');
+  const contacts = [
+    { Id: 'semcompra1', Name: 'Sem compra 1', Gina_WhatsApp_Consent__c: 'granted' },
+    { Id: 'semcompra2', Name: 'Sem compra 2', Gina_WhatsApp_Consent__c: 'granted' },
+    { Id: 'semcompra3', Name: 'Sem compra 3', Gina_WhatsApp_Consent__c: 'granted' },
+    { Id: 'eva', Name: 'Eva', Gina_WhatsApp_Consent__c: 'granted' },
+  ];
+  const orders = [{ Id: 'e1', BillToContactId: 'eva', EffectiveDate: '2026-10-01', TotalAmount: 50, Status: 'Activated' }];
+
+  for (const customer of buildGinaCustomers(contacts, orders, today)) {
+    if (customer.orderCount === 0) {
+      assert.equal(customer.isVip, false, `${customer.name} não comprou e não pode ser VIP`);
+      assert.equal(customer.facts.isVip, false);
+    }
+  }
 });
