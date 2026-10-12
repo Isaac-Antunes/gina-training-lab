@@ -2,7 +2,7 @@ import React from 'react';
 import { GinaCharacter } from './GinaCharacter';
 import { Download } from 'lucide-react';
 
-export type NavTab = 'train' | 'scenarios' | 'challenges' | 'salesforce' | 'history' | 'method';
+export type NavTab = 'train' | 'scenarios' | 'challenges' | 'welcome' | 'salesforce' | 'history' | 'method';
 
 interface HeaderProps {
   currentTab: NavTab;
@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-[#eef6e6]/90 backdrop-blur-md border-b border-[#061f16]/10 px-4 md:px-8 py-3.5 transition-colors">
-      <div className="max-w-[1360px] mx-auto flex flex-wrap xl:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="max-w-[1360px] mx-auto flex flex-wrap 2xl:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
         {/* Zone 1: Single element brand wordmark with mini icon */}
         <button
           onClick={() => onTabChange('train')}
@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Zone 2: clean text navigation links */}
-        <nav className="order-last xl:order-none w-full xl:w-auto flex items-center gap-1.5 md:gap-4 lg:gap-6 text-xs md:text-sm font-semibold overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 xl:mx-0 xl:px-0">
+        <nav className="order-last 2xl:order-none w-full 2xl:w-auto flex items-center gap-1.5 md:gap-4 lg:gap-6 text-xs md:text-sm font-semibold overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 2xl:mx-0 2xl:px-0">
           <button
             onClick={() => onTabChange('train')}
             className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
@@ -67,6 +67,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#7FC453] text-[#061f16]">
               Suíte
             </span>
+          </button>
+          <button
+            onClick={() => onTabChange('welcome')}
+            className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
+              currentTab === 'welcome'
+                ? 'bg-[#1E6B2E] text-[#f5f3ed] shadow-xs'
+                : 'text-[#061f16]/80 hover:text-[#1E6B2E] hover:bg-[#14502a]/5'
+            }`}
+          >
+            Boas-vindas
           </button>
           <button
             onClick={() => onTabChange('salesforce')}
