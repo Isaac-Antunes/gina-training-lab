@@ -20,7 +20,9 @@
     "playground": "node --import tsx scripts/playground.ts",
     "scan": "node scripts/scan-injection.mjs",
     "sf:env": "node scripts/salesforce-env.mjs",
-    "sf:seed": "node --import tsx scripts/salesforce-seed.mjs"
+    "sf:seed": "node --import tsx scripts/salesforce-seed.mjs",
+    "build:showcase": "vite build --config vite.showcase.config.ts",
+    "preview:showcase": "vite preview --config vite.showcase.config.ts --open /showcase.html"
   },
   "engines": { "node": ">=22.12.0" },
   "dependencies": {

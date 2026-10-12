@@ -3,6 +3,8 @@ import { Cloud, Crown, Database, Lock, RefreshCw, ShieldCheck, AlertTriangle, Cl
 import { GinaCharacter } from './GinaCharacter';
 import type { GinaSalesforceCustomer } from '../integrations/salesforce/toGina';
 import { buildOwnerTask } from '../integrations/salesforce/ownerTask';
+import { buildGinaCustomers } from '../integrations/salesforce/toGina';
+import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from '../integrations/salesforce/demoData';
 import type { GinaMood } from '../types/crm';
 
 type Source = 'demo' | 'org';
@@ -149,7 +151,18 @@ const OwnerTaskButton: React.FC<{ state?: TaskState; onCreate: () => void }> = (
   );
 };
 
-export const SalesforceView: React.FC = () => {
+/** Demonstração calculada no navegador: as mesmas regras, sem servidor. */
+const localDemo = (): CustomersResponse => ({
+  source: 'demo',
+  referenceDate: DEMO_TODAY.toISOString().slice(0, 10),
+  customers: buildGinaCustomers(DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY),
+});
+
+/**
+ * @param demoOnly vitrine pública: só a demonstração, calculada no navegador,
+ *   sem chamar o servidor e sem a opção de conectar uma org.
+ */
+export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = false }) => {
   const [source, setSource] = useState<Source>('demo');
   const [data, setData] = useState<CustomersResponse | null>(null);
   const [error, setError] = useState<{ code?: string; message: string } | null>(null);
@@ -158,6 +171,12 @@ export const SalesforceView: React.FC = () => {
   const [tasks, setTasks] = useState<Record<string, TaskState>>({});
 
   const createTask = async (contactId: string) => {
+    if (demoOnly) {
+      const customer = data?.customers.find((c) => c.contactId === contactId);
+      const task = customer && buildOwnerTask(customer, DEMO_TODAY);
+      setTasks((prev) => ({ ...prev, [contactId]: { status: 'done', simulated: true, subject: task?.Subject } }));
+      return;
+    }
     setTasks((prev) => ({ ...prev, [contactId]: { status: 'loading' } }));
     try {
       const res = await fetch('/api/salesforce/tasks', {
@@ -177,9 +196,13 @@ export const SalesforceView: React.FC = () => {
   };
 
   const load = async (target: Source) => {
-    setLoading(true);
     setError(null);
     setTasks({});
+    if (demoOnly) {
+      setData(localDemo());
+      return;
+    }
+    setLoading(true);
     try {
       const res = await fetch(`/api/salesforce/customers?source=${target}`);
       const body = await res.json().catch(() => ({}));
@@ -230,7 +253,7 @@ export const SalesforceView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 md:items-end shrink-0">
+        {!demoOnly && <div className="flex flex-col gap-3 md:items-end shrink-0">
           <div className="inline-flex p-1 rounded-full bg-[#e9efe2] border border-[#061f16]/8" role="tablist" aria-label="Origem dos dados">
             {(['demo', 'org'] as Source[]).map((option) => (
               <button
@@ -254,7 +277,7 @@ export const SalesforceView: React.FC = () => {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Atualizar leitura
           </button>
-        </div>
+        </div>}
       </section>
 
       {/* Aviso de origem */}

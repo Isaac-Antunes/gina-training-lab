@@ -5,7 +5,7 @@ import { zipSync } from 'fflate';
 
 const root = path.resolve(process.argv[2] || fileURLToPath(new URL('../', import.meta.url)));
 const output = path.resolve(process.argv[3] || path.join(root, 'public/gina-training-lab-updated.zip'));
-const excluded = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', '.claude', '.DS_Store']);
+const excluded = new Set(['node_modules', 'dist', 'dist-showcase', 'build', 'coverage', '.git', '.claude', '.sf', '.sfdx', '.vercel', '.DS_Store']);
 const files = {};
 
 async function collect(directory, relative = '') {

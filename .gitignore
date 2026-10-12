@@ -1,6 +1,7 @@
 node_modules/
 build/
 dist/
+dist-showcase/
 coverage/
 .DS_Store
 *.log
@@ -14,3 +15,4 @@ coverage/
 # Salesforce CLI (estado local do projeto em salesforce/)
 .sf/
 .sfdx/
+.vercel/

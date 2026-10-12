@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run build:showcase",
+  "outputDirectory": "dist-showcase",
+  "framework": null,
+  "rewrites": [{ "source": "/", "destination": "/showcase.html" }]
+}
