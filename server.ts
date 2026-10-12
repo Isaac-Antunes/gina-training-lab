@@ -11,7 +11,8 @@ import {
 } from './src/utils/contextEngineering';
 import { COMPOUND_CHALLENGES } from './src/data/challengesFixtures';
 import { SCENARIOS } from './src/data/scenarios';
-import { createSalesforceReader } from './src/integrations/salesforce/client';
+import { createSalesforceReader, createSalesforceTaskWriter, isContactId } from './src/integrations/salesforce/client';
+import { buildOwnerTask } from './src/integrations/salesforce/ownerTask';
 import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from './src/integrations/salesforce/demoData';
 import { buildGinaCustomers } from './src/integrations/salesforce/toGina';
 import { buildEvaluatorMessage, buildGinaScenarioMessage, EVALUATOR_SYSTEM_PROMPT, GINA_SYSTEM_PROMPT } from './src/utils/ginaPrompts';
@@ -499,6 +500,55 @@ app.get('/api/salesforce/customers', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Erro ao ler a Salesforce:', error?.message);
     return res.status(502).json({ code: 'salesforce_error', error: error?.message || 'Falha ao ler a Salesforce.' });
+  }
+});
+
+// Cria a tarefa para o dono aprovar. A tela só manda o id do contato: a decisão
+// é recalculada aqui, a partir da org, e só as decisões que pedem ação viram tarefa.
+app.post('/api/salesforce/tasks', async (req: Request, res: Response) => {
+  const source = req.body?.source === 'org' ? 'org' : 'demo';
+  const contactId = req.body?.contactId;
+  const NO_TASK = { code: 'no_task_needed', error: 'Esta decisão não pede ação do dono: nenhuma tarefa criada.' };
+
+  try {
+    if (source === 'demo') {
+      const customer = buildGinaCustomers(DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY).find((c) => c.contactId === contactId);
+      if (!customer) return res.status(404).json({ code: 'contact_not_found', error: 'Contato não encontrado.' });
+      const task = buildOwnerTask(customer, DEMO_TODAY);
+      if (!task) return res.status(409).json(NO_TASK);
+      return res.json({ simulated: true, task });
+    }
+
+    if (!salesforceConfigured()) {
+      return res.status(503).json({ code: 'salesforce_not_configured', error: 'Salesforce não configurada.' });
+    }
+    if (!isContactId(contactId)) {
+      return res.status(400).json({ code: 'invalid_contact', error: 'Id de contato inválido.' });
+    }
+
+    const connection = {
+      instanceUrl: process.env.SALESFORCE_INSTANCE_URL!,
+      accessToken: process.env.SALESFORCE_ACCESS_TOKEN!,
+      apiVersion: process.env.SALESFORCE_API_VERSION || undefined,
+    };
+    const reader = createSalesforceReader(connection);
+    const writer = createSalesforceTaskWriter(connection);
+    const today = new Date();
+    const [contacts, orders] = await Promise.all([reader.listContacts(), reader.listOrders()]);
+    const customer = buildGinaCustomers(contacts, orders, today).find((c) => c.contactId === contactId);
+    if (!customer) return res.status(404).json({ code: 'contact_not_found', error: 'Contato não encontrado na org.' });
+
+    const task = buildOwnerTask(customer, today);
+    if (!task) return res.status(409).json(NO_TASK);
+
+    const existing = await writer.findOpenGinaTask(contactId);
+    if (existing) return res.json({ created: false, id: existing, url: writer.taskUrl(existing), task });
+
+    const id = await writer.createTask(task);
+    return res.json({ created: true, id, url: writer.taskUrl(id), task });
+  } catch (error: any) {
+    console.error('Erro ao criar tarefa na Salesforce:', error?.message);
+    return res.status(502).json({ code: 'salesforce_error', error: error?.message || 'Falha ao criar a tarefa.' });
   }
 });
 

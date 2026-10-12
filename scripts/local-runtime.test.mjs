@@ -147,6 +147,30 @@ test('Salesforce org mode explains what is missing when not configured', async (
   });
 });
 
+test('owner task: demo only simulates, decisions are recomputed and org needs config', async () => {
+  await withServer('', async (url) => {
+    const post = (body) =>
+      fetch(`${url}/api/salesforce/tasks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+    const marina = await post({ source: 'demo', contactId: '003DEMO01' });
+    assert.equal(marina.status, 200);
+    const created = await marina.json();
+    assert.equal(created.simulated, true);
+    assert.match(created.task.Subject, /^Gina: aprovar lembrete amigável/);
+
+    // A tela não escolhe a decisão: Ana está em ritmo, mesmo que o cliente mande outra coisa.
+    const ana = await post({ source: 'demo', contactId: '003DEMO02', recommendedAction: 'friendly_nudge' });
+    assert.equal(ana.status, 409);
+    assert.equal((await ana.json()).code, 'no_task_needed');
+
+    assert.equal((await post({ source: 'demo', contactId: '003NAOEXISTE' })).status, 404);
+
+    const org = await post({ source: 'org', contactId: '003gK000017SVagQAG' });
+    assert.equal(org.status, 503);
+    assert.equal((await org.json()).code, 'salesforce_not_configured');
+  });
+});
+
 test('download endpoint returns an actual source ZIP', async () => {
   await withServer('', async (url) => {
     const response = await fetch(`${url}/api/download-zip`);

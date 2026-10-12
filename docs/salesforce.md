@@ -69,5 +69,5 @@ O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/
 
 1. ~~Criar uma Developer Edition gratuita e ligar a tela à org.~~ Feito em 12/10/2026 (20 contatos de exemplo, nenhum pedido).
 2. ~~Importar os clientes de demonstração da Gina como Contact + Order na org.~~ Feito em 12/10/2026: os 9 clientes caem na mesma regra na org e no modo demonstração.
-3. Botão "criar tarefa para o dono" na tela "Gina na Salesforce".
+3. ~~Botão "criar tarefa para o dono".~~ Feito em 12/10/2026: só lembrete, boas-vindas, 2ª compra e contato humano com VIP viram `Task` (assunto "Gina: …"); o servidor recalcula a decisão lendo a org e não duplica tarefa aberta. Na demonstração, só a prévia.
 4. Depois, repetir no Coral Cloud e gravar um vídeo curto para o Behance.

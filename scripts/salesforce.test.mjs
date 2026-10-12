@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSalesforceReader } from '../src/integrations/salesforce/client.ts';
+import { createSalesforceReader, createSalesforceTaskWriter, isContactId } from '../src/integrations/salesforce/client.ts';
+import { buildOwnerTask } from '../src/integrations/salesforce/ownerTask.ts';
+import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from '../src/integrations/salesforce/demoData.ts';
 import { buildGinaCustomers, readConsent } from '../src/integrations/salesforce/toGina.ts';
 
 const INSTANCE = 'https://gina-dev.develop.my.salesforce.com';
@@ -129,4 +131,61 @@ test('contacts without purchases never become VIP', () => {
       assert.equal(customer.facts.isVip, false);
     }
   }
+});
+
+test('only decisions that need the owner become tasks, and none claims a message was sent', () => {
+  const customers = buildGinaCustomers(DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY);
+  const tasks = Object.fromEntries(customers.map((c) => [c.name, buildOwnerTask(c, DEMO_TODAY)]));
+
+  // Pedem ação do dono
+  assert.match(tasks['Marina Souza'].Subject, /^Gina: aprovar lembrete amigável · Marina Souza$/);
+  assert.match(tasks['Paulo Mendes'].Subject, /boas-vindas/);
+  assert.match(tasks['Júlia Rocha'].Subject, /2ª compra/);
+  assert.match(tasks['Roberto Alves'].Subject, /contato pessoal com cliente VIP/);
+  assert.equal(tasks['Roberto Alves'].Priority, 'High');
+  assert.equal(tasks['Marina Souza'].Priority, 'Normal');
+
+  // Decisões de não agir: em ritmo, dormência, opt-out, sem consentimento, contatos ignorados
+  for (const name of ['Ana Lima', 'Helena Costa', 'Carlos Nunes', 'Beatriz Ramos', 'Fernanda Dias']) {
+    assert.equal(tasks[name], null, `${name} não deveria gerar tarefa`);
+  }
+
+  for (const task of Object.values(tasks).filter(Boolean)) {
+    assert.equal(task.Status, 'Not Started');
+    assert.equal(task.ActivityDate, '2026-10-10');
+    assert.match(task.Description, /Nada foi enviado ao cliente|não redige nem envia/);
+    assert.doesNotMatch(task.Description, /\b(enviei|disparei|mensagem enviada)\b/i);
+  }
+});
+
+test('task writer checks for an open Gina task and only POSTs to /sobjects/Task', async () => {
+  const contactId = '003gK000017SVagQAG';
+  const { impl, calls } = fakeFetch([
+    { totalSize: 0, done: true, records: [] },
+    { id: '00TgK000001abcdQAA', success: true },
+  ]);
+  const writer = createSalesforceTaskWriter({ instanceUrl: INSTANCE, accessToken: 't', fetchImpl: impl });
+
+  assert.equal(await writer.findOpenGinaTask(contactId), null);
+  const id = await writer.createTask({
+    WhoId: contactId, Subject: 'Gina: teste', Description: 'x', ActivityDate: '2026-10-10', Priority: 'Normal', Status: 'Not Started',
+  });
+
+  assert.equal(id, '00TgK000001abcdQAA');
+  assert.equal(calls[0].init.method, 'GET');
+  assert.match(decodeURIComponent(calls[0].url), /FROM Task WHERE WhoId = '003gK000017SVagQAG' AND IsClosed = false AND Subject LIKE 'Gina:%'/);
+  assert.equal(calls[1].init.method, 'POST');
+  assert.ok(calls[1].url.endsWith('/services/data/v62.0/sobjects/Task'));
+  assert.equal(JSON.parse(calls[1].init.body).WhoId, contactId);
+  assert.equal(writer.taskUrl(id), `${INSTANCE}/lightning/r/Task/00TgK000001abcdQAA/view`);
+});
+
+test('task writer refuses ids that are not contacts (no SOQL injection)', async () => {
+  const { impl, calls } = fakeFetch([]);
+  const writer = createSalesforceTaskWriter({ instanceUrl: INSTANCE, accessToken: 't', fetchImpl: impl });
+  for (const bad of ["003' OR Name != '", '001gK000017SVagQAG', '003abc']) {
+    assert.equal(isContactId(bad), false);
+    await assert.rejects(writer.findOpenGinaTask(bad), /inválido/);
+  }
+  assert.equal(calls.length, 0);
 });

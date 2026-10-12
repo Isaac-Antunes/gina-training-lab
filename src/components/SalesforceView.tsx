@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Cloud, Crown, Database, Lock, RefreshCw, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Cloud, Crown, Database, Lock, RefreshCw, ShieldCheck, AlertTriangle, ClipboardCheck, ExternalLink, Loader2 } from 'lucide-react';
 import { GinaCharacter } from './GinaCharacter';
 import type { GinaSalesforceCustomer } from '../integrations/salesforce/toGina';
+import { buildOwnerTask } from '../integrations/salesforce/ownerTask';
 import type { GinaMood } from '../types/crm';
 
 type Source = 'demo' | 'org';
@@ -101,15 +102,84 @@ const daysBetween = (from: string, to: string) =>
 
 const formatDate = (iso: string) => iso.split('-').reverse().join('/');
 
+type TaskState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'done'; simulated?: boolean; created?: boolean; url?: string; subject?: string };
+
+/** Pedido de aprovação ao dono. Na demonstração só mostra a prévia; na org cria a Task. */
+const OwnerTaskButton: React.FC<{ state?: TaskState; onCreate: () => void }> = ({ state, onCreate }) => {
+  if (state?.status === 'done') {
+    return (
+      <div className="rounded-xl bg-[#e9efe2] border border-[#1E6B2E]/15 p-3 text-[11px] text-[#061f16]/80 space-y-1" role="status">
+        <p className="font-bold text-[#1E6B2E] flex items-center gap-1.5">
+          <ClipboardCheck className="w-3.5 h-3.5" />
+          {state.simulated
+            ? 'Prévia: na sua org, esta tarefa iria para o dono'
+            : state.created
+              ? 'Tarefa criada para o dono'
+              : 'Já existe uma tarefa da Gina aberta'}
+        </p>
+        {state.subject && <p>{state.subject}</p>}
+        {state.url && (
+          <a href={state.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-[#1E6B2E] underline underline-offset-2">
+            Abrir na Salesforce <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        onClick={onCreate}
+        disabled={state?.status === 'loading'}
+        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#1E6B2E] hover:bg-[#14502a] text-[#f5f3ed] text-xs font-bold disabled:opacity-60 cursor-pointer transition-colors"
+      >
+        {state?.status === 'loading' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
+        Criar tarefa para o dono
+      </button>
+      {state?.status === 'error' && (
+        <p className="text-[11px] text-red-700" role="alert">
+          {state.message}
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const SalesforceView: React.FC = () => {
   const [source, setSource] = useState<Source>('demo');
   const [data, setData] = useState<CustomersResponse | null>(null);
   const [error, setError] = useState<{ code?: string; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [tasks, setTasks] = useState<Record<string, TaskState>>({});
+
+  const createTask = async (contactId: string) => {
+    setTasks((prev) => ({ ...prev, [contactId]: { status: 'loading' } }));
+    try {
+      const res = await fetch('/api/salesforce/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, contactId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Erro do servidor (${res.status})`);
+      setTasks((prev) => ({
+        ...prev,
+        [contactId]: { status: 'done', simulated: body.simulated, created: body.created, url: body.url, subject: body.task?.Subject },
+      }));
+    } catch (err: any) {
+      setTasks((prev) => ({ ...prev, [contactId]: { status: 'error', message: err?.message || 'Falha ao criar a tarefa.' } }));
+    }
+  };
+
   const load = async (target: Source) => {
     setLoading(true);
     setError(null);
+    setTasks({});
     try {
       const res = await fetch(`/api/salesforce/customers?source=${target}`);
       const body = await res.json().catch(() => ({}));
@@ -298,6 +368,10 @@ export const SalesforceView: React.FC = () => {
                   <ShieldCheck className="w-3.5 h-3.5 text-[#1E6B2E] shrink-0 mt-px" />
                   <span>{action.next}</span>
                 </p>
+
+                {buildOwnerTask(customer, new Date(`${data.referenceDate}T00:00:00Z`)) && (
+                  <OwnerTaskButton state={tasks[customer.contactId]} onCreate={() => createTask(customer.contactId)} />
+                )}
               </article>
             );
         };

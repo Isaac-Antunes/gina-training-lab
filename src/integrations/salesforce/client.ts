@@ -1,3 +1,4 @@
+import { GINA_TASK_PREFIX, OwnerTask } from './ownerTask';
 import { SalesforceContact, SalesforceOrder, SoqlResponse } from './types';
 
 export interface SalesforceConnection {
@@ -80,6 +81,53 @@ export function createSalesforceReader(connection: SalesforceConnection) {
       return query<SalesforceOrder>(
         `SELECT ${ORDER_FIELDS.join(', ')} FROM Order WHERE BillToContactId != null ORDER BY EffectiveDate`
       );
+    },
+  };
+}
+
+/** Id de Contato da Salesforce (prefixo 003, 15 ou 18 caracteres). */
+export const isContactId = (id: unknown): id is string => typeof id === 'string' && /^003[A-Za-z0-9]{12}(?:[A-Za-z0-9]{3})?$/.test(id);
+
+/**
+ * A única escrita da Gina: criar uma Task para o dono aprovar. Não altera
+ * contatos nem pedidos e não envia mensagem. Separado do leitor de propósito.
+ */
+export function createSalesforceTaskWriter(connection: SalesforceConnection) {
+  const reader = createSalesforceReader(connection);
+  const apiVersion = connection.apiVersion || DEFAULT_API_VERSION;
+  const fetchImpl = connection.fetchImpl || fetch;
+  const base = new URL(connection.instanceUrl);
+
+  return {
+    /** Tarefa da Gina ainda aberta para este contato, se houver (evita duplicar). */
+    async findOpenGinaTask(contactId: string): Promise<string | null> {
+      if (!isContactId(contactId)) throw new Error('Id de contato inválido.');
+      const [task] = await reader.query<{ Id: string }>(
+        `SELECT Id FROM Task WHERE WhoId = '${contactId}' AND IsClosed = false AND Subject LIKE '${GINA_TASK_PREFIX}%' LIMIT 1`
+      );
+      return task?.Id ?? null;
+    },
+
+    async createTask(task: OwnerTask): Promise<string> {
+      if (!isContactId(task.WhoId)) throw new Error('Id de contato inválido.');
+      const response = await fetchImpl(new URL(`/services/data/${apiVersion}/sobjects/Task`, base), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${connection.accessToken}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(task),
+      });
+      if (!response.ok) {
+        throw new Error(`Salesforce respondeu ${response.status} ao criar a tarefa.`);
+      }
+      return ((await response.json()) as { id: string }).id;
+    },
+
+    /** Link da tarefa no Lightning, para o dono abrir. */
+    taskUrl(id: string): string {
+      return new URL(`/lightning/r/Task/${id}/view`, base).toString();
     },
   };
 }
