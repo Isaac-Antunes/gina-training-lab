@@ -4,6 +4,9 @@
 //   npm run sf:seed -- --remove      apaga tudo o que a importação criou
 // A autenticação fica com o Salesforce CLI; o token não passa por este script.
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from '../src/integrations/salesforce/demoData.ts';
 
 const args = process.argv.slice(2);
@@ -16,7 +19,19 @@ const PRODUCT_NAME = 'Kit demo da Gina';
 const DEMO_NOTE = 'Demo da Gina: dado fictício, pode ser apagado com npm run sf:seed -- --remove';
 
 function api(method, url, body) {
-  const out = execFileSync('sf', ['api', 'request', 'rest', url, '-o', alias, '-X', method, '-b', body ? '-' : ''], {
+  let requestArgs;
+  if (method === 'DELETE') {
+    // O CLI exige um corpo no DELETE mesmo sem conteúdo ("No 'mode' found in
+    // 'body' entry"); pelo arquivo de requisição dá para mandar um corpo vazio.
+    const dir = mkdtempSync(join(tmpdir(), 'gina-sf-'));
+    const file = join(dir, 'request.json');
+    writeFileSync(file, JSON.stringify({ url, method, body: { mode: 'raw', raw: '' } }));
+    requestArgs = ['-f', file];
+  } else {
+    // Sem corpo (GET), o -b fica de fora: o CLI recusa -b vazio.
+    requestArgs = [url, '-X', method, ...(body ? ['-b', '-'] : [])];
+  }
+  const out = execFileSync('sf', ['api', 'request', 'rest', ...requestArgs, '-o', alias], {
     encoding: 'utf8',
     input: body ? JSON.stringify(body) : undefined,
     stdio: ['pipe', 'pipe', 'pipe'],
