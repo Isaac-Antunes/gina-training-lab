@@ -234,9 +234,12 @@ export const SalesforceView: React.FC = () => {
       )}
 
       {/* Clientes */}
-      {data && (
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {data.customers.map((customer) => {
+      {data && (() => {
+        // Quem tem pedido vem primeiro: é onde a Gina tem algo a decidir.
+        // Contatos sem compra (comuns numa org real) ficam num bloco à parte.
+        const buyers = data.customers.filter((c) => c.orderCount > 0);
+        const withoutOrders = data.customers.filter((c) => c.orderCount === 0);
+        const renderCard = (customer: GinaSalesforceCustomer) => {
             const action = actionFor(customer);
             const consent = CONSENT_INFO[customer.consent];
             const lastOrder = customer.orderDates[customer.orderDates.length - 1];
@@ -297,9 +300,24 @@ export const SalesforceView: React.FC = () => {
                 </p>
               </article>
             );
-          })}
-        </section>
-      )}
+        };
+
+        return (
+          <>
+            {buyers.length > 0 && (
+              <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">{buyers.map(renderCard)}</section>
+            )}
+            {withoutOrders.length > 0 && (
+              <section className="space-y-4" aria-label="Contatos sem pedidos">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#061f16]/60">
+                  Sem pedidos registrados · {withoutOrders.length}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">{withoutOrders.map(renderCard)}</div>
+              </section>
+            )}
+          </>
+        );
+      })()}
 
       {loading && !data && <p className="text-sm text-[#061f16]/60">Lendo a Salesforce…</p>}
     </div>
