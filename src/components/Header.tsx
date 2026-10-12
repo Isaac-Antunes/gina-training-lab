@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-[#eef6e6]/90 backdrop-blur-md border-b border-[#061f16]/10 px-4 md:px-8 py-3.5 transition-colors">
-      <div className="max-w-[1360px] mx-auto flex flex-wrap md:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="max-w-[1360px] mx-auto flex flex-wrap xl:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
         {/* Zone 1: Single element brand wordmark with mini icon */}
         <button
           onClick={() => onTabChange('train')}
@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Zone 2: clean text navigation links */}
-        <nav className="order-last md:order-none w-full md:w-auto flex items-center gap-1.5 md:gap-4 lg:gap-6 text-xs md:text-sm font-semibold overflow-x-auto whitespace-nowrap -mx-1 px-1 md:mx-0 md:px-0">
+        <nav className="order-last xl:order-none w-full xl:w-auto flex items-center gap-1.5 md:gap-4 lg:gap-6 text-xs md:text-sm font-semibold overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 xl:mx-0 xl:px-0">
           <button
             onClick={() => onTabChange('train')}
             className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
