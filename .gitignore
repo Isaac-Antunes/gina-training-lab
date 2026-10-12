@@ -10,3 +10,7 @@ coverage/
 
 # Configuração local do Claude Code (caminhos desta máquina)
 .claude/
+
+# Salesforce CLI (estado local do projeto em salesforce/)
+.sf/
+.sfdx/

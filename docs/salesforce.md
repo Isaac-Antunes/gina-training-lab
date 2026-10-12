@@ -52,7 +52,9 @@ O acesso usa o login do Salesforce CLI, sem aplicativo conectado; as credenciais
 
 1. `sf org login web --alias gina-dev --browser chrome` e autorizar no navegador.
 2. `npm run sf:env`: copia a URL e o token do CLI para o `.env.local`, sem imprimir o token. O token expira com a sessão; se a tela der 401, rode de novo.
-3. `npm run dev` e abrir a aba **Salesforce → Minha org**.
+3. Uma vez por org: `cd salesforce && sf project deploy start -o gina-dev -d force-app` (cria os campos `Gina_WhatsApp_Consent__c` e `Gina_Ignored_Contacts__c`) e `sf org assign permset -n Gina_Demo -o gina-dev` (libera a leitura deles e do opt-out).
+4. Opcional, só em Developer Edition ou sandbox: `npm run sf:seed` importa os 9 clientes de demonstração (conta "Loja demo da Gina", 26 pedidos, datas puxadas para hoje). `npm run sf:seed -- --remove` apaga tudo. A importação é atômica: se algo falha, nada fica na org.
+5. `npm run dev` e abrir a aba **Salesforce → Minha org**.
 
 O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/describe`) e só pede esses. Sem `HasOptedOutOfEmail` ou sem os campos da Gina, a leitura continua; o consentimento fica "ausente" e o envio é bloqueado. Contatos sem pedidos ficam fora do ranking VIP.
 
@@ -66,6 +68,6 @@ O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/
 ## Próximos passos
 
 1. ~~Criar uma Developer Edition gratuita e ligar a tela à org.~~ Feito em 12/10/2026 (20 contatos de exemplo, nenhum pedido).
-2. Importar os clientes de demonstração da Gina como Contact + Order na org (escrita: só com aprovação do Isaac).
+2. ~~Importar os clientes de demonstração da Gina como Contact + Order na org.~~ Feito em 12/10/2026: os 9 clientes caem na mesma regra na org e no modo demonstração.
 3. Botão "criar tarefa para o dono" na tela "Gina na Salesforce".
 4. Depois, repetir no Coral Cloud e gravar um vídeo curto para o Behance.

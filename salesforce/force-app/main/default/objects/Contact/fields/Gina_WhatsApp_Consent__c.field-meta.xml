@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Gina_WhatsApp_Consent__c</fullName>
+    <label>Gina: consentimento WhatsApp</label>
+    <description>Consentimento documentado para mensagens da loja. Vazio ou missing bloqueia o envio; a Gina nunca presume consentimento.</description>
+    <type>Picklist</type>
+    <required>false</required>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>granted</fullName><default>false</default><label>granted</label></value>
+            <value><fullName>missing</fullName><default>false</default><label>missing</label></value>
+            <value><fullName>revoked</fullName><default>false</default><label>revoked</label></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

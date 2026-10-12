@@ -19,7 +19,8 @@
     "package:source": "node scripts/package-source.mjs",
     "playground": "node --import tsx scripts/playground.ts",
     "scan": "node scripts/scan-injection.mjs",
-    "sf:env": "node scripts/salesforce-env.mjs"
+    "sf:env": "node scripts/salesforce-env.mjs",
+    "sf:seed": "node --import tsx scripts/salesforce-seed.mjs"
   },
   "engines": { "node": ">=22.12.0" },
   "dependencies": {

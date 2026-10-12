@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Gina Demo</label>
+    <description>Libera para o usuário os campos que a Gina lê no Contato.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Contact.Gina_WhatsApp_Consent__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Contact.Gina_Ignored_Contacts__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Contact.HasOptedOutOfEmail</field>
+        <readable>true</readable>
+    </fieldPermissions>
+</PermissionSet>
