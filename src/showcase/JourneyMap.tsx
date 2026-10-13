@@ -3,31 +3,39 @@ import { ArrowRight } from 'lucide-react';
 
 export type DemoTab = 'welcome' | 'rhythm';
 
+/** Os quatro modos da Gina, os mesmos do case no Behance. */
+type Mode = 'intake' | 'organize' | 'connect';
+const MODE_LABEL: Record<Mode, string> = { intake: 'Receber', organize: 'Organizar', connect: 'Conectar' };
+
 interface Step {
   title: string;
   text: string;
   demo: DemoTab;
+  mode: Mode;
 }
 
 /** Jornada do lead no método Gina Intell, com os mesmos termos da página de consultoria. */
 const STEPS: Step[] = [
-  { title: 'Cadastro', text: 'Alguém se cadastra no site, no balcão ou pelo Instagram.', demo: 'welcome' },
+  { title: 'Cadastro', text: 'Alguém se cadastra no site, no balcão ou pelo Instagram.', demo: 'welcome', mode: 'intake' },
   {
     title: 'Prova de consentimento',
     text: 'Quando aceitou, qual texto e por qual canal. Sem prova, ninguém recebe nada.',
     demo: 'welcome',
+    mode: 'intake',
   },
   {
     title: 'Relatório do cadastro',
     text: 'Nome, WhatsApp, e-mail e cadastro repetido: o que falta, a Gina aponta.',
     demo: 'welcome',
+    mode: 'organize',
   },
-  { title: 'Boas-vindas', text: 'Rascunho no canal autorizado. Você aprova antes do envio.', demo: 'welcome' },
-  { title: 'Segunda compra', text: 'Quem comprou uma vez recebe um motivo para voltar.', demo: 'rhythm' },
+  { title: 'Boas-vindas', text: 'Rascunho no canal autorizado. Você aprova antes do envio.', demo: 'welcome', mode: 'connect' },
+  { title: 'Segunda compra', text: 'Quem comprou uma vez recebe um motivo para voltar.', demo: 'rhythm', mode: 'connect' },
   {
     title: 'Ritmo de compra',
     text: 'Em dia, atrasado (1,5×), dormente (3×) ou VIP, que só recebe contato pessoal.',
     demo: 'rhythm',
+    mode: 'organize',
   },
 ];
 
@@ -37,10 +45,10 @@ export const JourneyMap: React.FC<{ onOpenDemo: (tab: DemoTab) => void }> = ({ o
   <section className="bg-[#1E6B2E] text-[#f5f3ed] rounded-[24px] p-6 md:p-10 overflow-hidden" aria-labelledby="jornada-titulo">
     <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
       <img
-        src="/gina-3d.webp"
-        alt="Gina, a mascote @ verde-limão, acenando"
-        width={720}
-        height={1080}
+        src="/gina-intake.png"
+        alt="Gina, a mascote verde-limão do método, acenando"
+        width={320}
+        height={360}
         fetchPriority="high"
         className="w-24 md:w-36 h-auto shrink-0 self-center md:self-auto drop-shadow-[0_12px_24px_rgba(6,31,22,0.35)]"
       />
@@ -66,7 +74,11 @@ export const JourneyMap: React.FC<{ onOpenDemo: (tab: DemoTab) => void }> = ({ o
             >
               {i + 1}
             </span>
-            <h2 className="font-bold text-base leading-tight">{step.title}</h2>
+            <h2 className="font-bold text-base leading-tight flex-1">{step.title}</h2>
+            <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-[#061f16]/25 pl-1 pr-2.5 py-0.5 text-[11px] font-bold text-[#d4efbe]">
+              <img src={`/gina-${step.mode}.png`} alt="" width={20} height={20} loading="lazy" className="w-5 h-5 object-contain" />
+              {MODE_LABEL[step.mode]}
+            </span>
           </div>
           <p className="text-[13px] text-[#d4efbe] leading-relaxed">{step.text}</p>
           <button

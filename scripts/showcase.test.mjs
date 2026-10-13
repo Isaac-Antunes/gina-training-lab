@@ -25,8 +25,8 @@ const FORBIDDEN = [
   '99135',
 ];
 
-// Únicos arquivos que não são código: a imagem de prévia e a Gina 3D oficial.
-const ALLOWED_ASSETS = ['gina-3d.webp', 'og-gina.jpg'];
+// Únicos arquivos que não são código: a imagem de prévia e as poses oficiais da Gina.
+const ALLOWED_ASSETS = ['gina-complete.png', 'gina-connect.png', 'gina-head.png', 'gina-intake.png', 'gina-organize.png', 'og-gina.jpg'];
 const PUBLIC_EMAIL = 'iantunessp@gmail.com';
 
 async function listFiles(dir) {
@@ -47,7 +47,7 @@ test('public showcase ships only the demos: no source ZIP, keys, prompts or pers
   assert.deepEqual(
     files.filter((f) => !/\.(html|js|css)$/.test(f)).map((f) => path.relative(outDir, f)).sort(),
     ALLOWED_ASSETS,
-    'só código e as duas imagens: nada da pasta public/ (onde fica o ZIP)'
+    'só código e as imagens da Gina: nada da pasta public/ (onde fica o ZIP)'
   );
 
   for (const file of files.filter((f) => /\.(html|js|css)$/.test(f))) {

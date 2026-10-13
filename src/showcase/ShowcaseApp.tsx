@@ -1,5 +1,4 @@
 import React, { useRef, useState } from 'react';
-import { GinaCharacter } from '../components/GinaCharacter';
 import { SalesforceView } from '../components/SalesforceView';
 import { WelcomeView } from '../components/WelcomeView';
 import { ContactCta } from './ContactCta';
@@ -33,7 +32,7 @@ export default function ShowcaseApp() {
             aria-label="Gina Intell, voltar ao topo"
           >
             <div className="w-8 h-8 rounded-full bg-[#f5f3ed] border border-[#14502a]/15 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
-              <GinaCharacter mood="listening" size="mini" />
+              <img src="/gina-head.png" alt="" width={32} height={32} className="w-7 h-7 object-contain" />
             </div>
             <span className="font-['Bagel_Fat_One'] text-xl md:text-2xl text-[#1E6B2E] tracking-tight leading-none">
               Gina <span className="text-[#061f16] font-sans font-extrabold text-sm uppercase tracking-widest ml-1">Intell</span>

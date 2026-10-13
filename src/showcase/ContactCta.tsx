@@ -7,6 +7,14 @@ const MAILTO = `mailto:${EMAIL}?subject=${encodeURIComponent('Quero ver a Gina n
 /** Chamada para contato ao fim da demonstração. Nenhum formulário: a vitrine não coleta dados. */
 export const ContactCta: React.FC = () => (
   <section className="bg-[#ffffff] rounded-[24px] p-6 md:p-10 shadow-xs border border-[#061f16]/8 flex flex-col lg:flex-row lg:items-center gap-6" aria-labelledby="contato-titulo">
+    <img
+      src="/gina-complete.png"
+      alt="Gina fazendo joinha"
+      width={320}
+      height={356}
+      loading="lazy"
+      className="w-20 md:w-28 h-auto shrink-0 self-center lg:self-auto"
+    />
     <div className="flex-1 space-y-2">
       <h2 id="contato-titulo" className="font-['Bagel_Fat_One'] text-2xl md:text-4xl text-[#1E6B2E] tracking-tight leading-tight">
         Quer ver isso na sua loja?

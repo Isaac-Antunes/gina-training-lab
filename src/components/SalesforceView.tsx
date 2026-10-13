@@ -345,7 +345,11 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
               >
                 <header className="flex items-start gap-3">
                   <div className="w-11 h-11 rounded-full bg-[#f5f3ed] border border-[#14502a]/10 flex items-center justify-center overflow-hidden shrink-0">
-                    <GinaCharacter mood={action.mood} size="mini" />
+                    {demoOnly ? (
+                      <img src="/gina-head.png" alt="" width={44} height={44} className="w-9 h-9 object-contain" />
+                    ) : (
+                      <GinaCharacter mood={action.mood} size="mini" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="font-bold text-[#061f16] flex items-center gap-1.5 truncate">
