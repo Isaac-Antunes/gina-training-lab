@@ -62,8 +62,8 @@ export const JourneyMap: React.FC<{ onOpenDemo: (tab: DemoTab) => void }> = ({ o
           funcionando com dados fictícios.
         </p>
         <p className="text-xs md:text-sm text-[#f5f3ed]/85 max-w-2xl leading-relaxed border-l-2 border-[#7FC453] pl-3">
-          Método criado por <strong className="font-bold">Isaac Antunes</strong>, analista sênior de CRM e lifecycle. Nos últimos
-          dois anos, no SBT, uma das maiores emissoras de TV aberta do Brasil.
+          Método criado por <strong className="font-bold">Isaac Antunes</strong>, consultor de CRM e lifecycle. Nos últimos dois
+          anos, analista de CRM no SBT, uma das maiores emissoras de TV aberta do Brasil.
         </p>
       </div>
     </div>
