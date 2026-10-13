@@ -11,17 +11,90 @@ import {
   UserPlus,
   XCircle,
 } from 'lucide-react';
-import { analyzeSignups, Decision, FieldStatus, SignupReport } from '../welcome/analyzeSignup';
-import { DEMO_SIGNUPS, DEMO_STORE } from '../welcome/demoSignups';
+import { analyzeSignups, Decision, FieldStatus, Lang, SignupReport } from '../welcome/analyzeSignup';
+import { getDemoSignups } from '../welcome/demoSignups';
 
-const DECISION_INFO: Record<Decision, { label: string; tone: string; group: string }> = {
-  welcome_ready: { label: 'Pronto para boas-vindas', tone: 'bg-[#7FC453]/25 text-[#14502a] border-[#7FC453]/40', group: 'Prontos' },
-  welcome_partial: { label: 'Boas-vindas com pendência', tone: 'bg-[#e9efe2] text-[#1E6B2E] border-[#1E6B2E]/15', group: 'Com pendência' },
-  merge_first: { label: 'Juntar cadastros antes', tone: 'bg-sky-50 text-sky-900 border-sky-200', group: 'Duplicados' },
-  blocked_no_proof: { label: 'Consentimento sem prova', tone: 'bg-amber-50 text-amber-900 border-amber-200', group: 'Bloqueados' },
-  blocked_no_channel: { label: 'Sem canal válido', tone: 'bg-amber-50 text-amber-900 border-amber-200', group: 'Bloqueados' },
-  do_not_contact: { label: 'Não contatar', tone: 'bg-red-50 text-red-900 border-red-200', group: 'Não contatar' },
+const DECISION_TONE: Record<Decision, string> = {
+  welcome_ready: 'bg-[#7FC453]/25 text-[#14502a] border-[#7FC453]/40',
+  welcome_partial: 'bg-[#e9efe2] text-[#1E6B2E] border-[#1E6B2E]/15',
+  merge_first: 'bg-sky-50 text-sky-900 border-sky-200',
+  blocked_no_proof: 'bg-amber-50 text-amber-900 border-amber-200',
+  blocked_no_channel: 'bg-amber-50 text-amber-900 border-amber-200',
+  do_not_contact: 'bg-red-50 text-red-900 border-red-200',
 };
+
+const TEXT = {
+  pt: {
+    decision: {
+      welcome_ready: ['Pronto para boas-vindas', 'Prontos'],
+      welcome_partial: ['Boas-vindas com pendência', 'Com pendência'],
+      merge_first: ['Juntar cadastros antes', 'Duplicados'],
+      blocked_no_proof: ['Consentimento sem prova', 'Bloqueados'],
+      blocked_no_channel: ['Sem canal válido', 'Bloqueados'],
+      do_not_contact: ['Não contatar', 'Não contatar'],
+    } as Record<Decision, [string, string]>,
+    field: { nome: 'Nome', whatsapp: 'WhatsApp', email: 'E-mail', origem: 'Origem' },
+    locale: 'pt-BR',
+    at: ' às ',
+    noName: 'Sem nome',
+    signedUp: 'cadastro em',
+    report: 'Relatório do cadastro',
+    refused: 'A caixinha de consentimento não foi marcada.',
+    unproven: (missing: string) => `Marcado, mas sem prova. Falta: ${missing}. Pela LGPD, cabe à loja provar o consentimento.`,
+    and: ' e ',
+    proven: 'Consentimento com prova',
+    acceptedAt: 'Aceito em',
+    channels: { whatsapp: 'WhatsApp', email: 'e-mail' },
+    pending: 'Para o dono resolver',
+    draftFor: (channel: string) => `Rascunho para ${channel}`,
+    approved: 'Aprovado pelo dono. Na demonstração, nada é enviado.',
+    discarded: 'Descartado. A Gina não envia nada.',
+    approve: 'Aprovar',
+    discard: 'Descartar',
+    eyebrow: 'Boas-vindas com consentimento',
+    title: 'Cadastrou? A Gina recebe.',
+    intro:
+      'Cada cadastro novo passa por três checagens: a prova do consentimento (quando, o quê e por qual canal), a qualidade dos dados e se a pessoa já existe na base. Quando dá para contatar, a Gina redige a boas-vindas no canal autorizado e espera o dono aprovar. Nada é enviado sozinho.',
+    fictional: 'Cadastros fictícios de uma loja sem fluxo de boas-vindas.',
+    summary: 'Resumo dos cadastros',
+  },
+  en: {
+    decision: {
+      welcome_ready: ['Ready for a welcome', 'Ready'],
+      welcome_partial: ['Welcome with to-dos', 'With to-dos'],
+      merge_first: ['Merge records first', 'Duplicates'],
+      blocked_no_proof: ['Consent without proof', 'Blocked'],
+      blocked_no_channel: ['No valid channel', 'Blocked'],
+      do_not_contact: ["Don't contact", "Don't contact"],
+    } as Record<Decision, [string, string]>,
+    field: { nome: 'Name', whatsapp: 'WhatsApp', email: 'Email', origem: 'Source' },
+    locale: 'en-US',
+    at: ' at ',
+    noName: 'No name',
+    signedUp: 'signed up',
+    report: 'Signup report',
+    refused: "The consent box wasn't checked.",
+    unproven: (missing: string) => `Checked, but no proof. Missing: ${missing}. Under Brazil's privacy law (LGPD), the shop has to prove consent.`,
+    and: ' and ',
+    proven: 'Consent with proof',
+    acceptedAt: 'Opted in',
+    channels: { whatsapp: 'WhatsApp', email: 'email' },
+    pending: 'For the owner to handle',
+    draftFor: (channel: string) => `Draft for ${channel}`,
+    approved: "Approved by the owner. In the demo, nothing's sent.",
+    discarded: "Discarded. Gina doesn't send anything.",
+    approve: 'Approve',
+    discard: 'Discard',
+    eyebrow: 'Welcome with consent',
+    title: 'Signed up? Gina says hi.',
+    intro:
+      "Every new signup goes through three checks: proof of consent (when, what and on which channel), data quality, and whether the person's already in your list. When it's OK to reach out, Gina drafts the welcome on the allowed channel and waits for the owner's approval. Nothing goes out on its own.",
+    fictional: "Made-up signups from a shop that doesn't have a welcome flow yet.",
+    summary: 'Signup summary',
+  },
+};
+
+type Text = (typeof TEXT)[Lang];
 
 const FIELD_ICON: Record<FieldStatus, { icon: React.ElementType; tone: string }> = {
   ok: { icon: CheckCircle2, tone: 'text-[#1E6B2E]' },
@@ -30,20 +103,20 @@ const FIELD_ICON: Record<FieldStatus, { icon: React.ElementType; tone: string }>
   invalid: { icon: XCircle, tone: 'text-red-600' },
 };
 
-const FIELD_LABEL = { nome: 'Nome', whatsapp: 'WhatsApp', email: 'E-mail', origem: 'Origem' } as const;
-
-const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(', ', ' às ');
+const formatDateTime = (iso: string, t: Text) =>
+  new Date(iso)
+    .toLocaleString(t.locale, { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    .replace(', ', t.at);
 
 type Approval = 'approved' | 'discarded';
 
-const ConsentBox: React.FC<{ report: SignupReport }> = ({ report }) => {
+const ConsentBox: React.FC<{ report: SignupReport; t: Text }> = ({ report, t }) => {
   const { consent, signup } = report;
   if (consent.status === 'refused') {
     return (
       <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-[11px] text-red-900 flex gap-2">
         <ShieldX className="w-4 h-4 shrink-0" />
-        <span>A caixinha de consentimento não foi marcada.</span>
+        <span>{t.refused}</span>
       </div>
     );
   }
@@ -51,32 +124,31 @@ const ConsentBox: React.FC<{ report: SignupReport }> = ({ report }) => {
     return (
       <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-950 flex gap-2">
         <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600" />
-        <span>
-          Marcado, mas sem prova. Falta: {consent.missing.join(' e ')}. Pela LGPD, cabe à loja provar o consentimento.
-        </span>
+        <span>{t.unproven(consent.missing.join(t.and))}</span>
       </div>
     );
   }
   return (
     <div className="rounded-xl bg-[#f5f3ed] border border-[#061f16]/8 p-3 text-[11px] text-[#061f16]/80 space-y-1.5">
       <p className="flex items-center gap-1.5 font-bold text-[#1E6B2E]">
-        <ShieldCheck className="w-4 h-4" /> Consentimento com prova
+        <ShieldCheck className="w-4 h-4" /> {t.proven}
       </p>
       <p>
-        Aceito em {formatDateTime(signup.consent.acceptedAt!)} ·{' '}
-        {signup.consent.channels.map((c) => (c === 'whatsapp' ? 'WhatsApp' : 'e-mail')).join(' e ')}
+        {t.acceptedAt} {formatDateTime(signup.consent.acceptedAt!, t)} ·{' '}
+        {signup.consent.channels.map((c) => t.channels[c]).join(t.and)}
       </p>
       <p className="italic text-[#061f16]/65">“{signup.consent.text}”</p>
     </div>
   );
 };
 
-const SignupCard: React.FC<{ report: SignupReport; approval?: Approval; onDecide: (a: Approval) => void }> = ({
+const SignupCard: React.FC<{ report: SignupReport; t: Text; approval?: Approval; onDecide: (a: Approval) => void }> = ({
   report,
+  t,
   approval,
   onDecide,
 }) => {
-  const info = DECISION_INFO[report.decision];
+  const [label] = t.decision[report.decision];
   const ChannelIcon = report.channel === 'email' ? Mail : MessageCircle;
 
   return (
@@ -84,33 +156,33 @@ const SignupCard: React.FC<{ report: SignupReport; approval?: Approval; onDecide
       <header className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <h3 className={`text-lg font-bold leading-tight ${report.signup.name ? 'text-[#061f16]' : 'text-[#061f16]/50 italic'}`}>
-            {report.signup.name || 'Sem nome'}
+            {report.signup.name || t.noName}
           </h3>
-          <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[11px] font-bold ${info.tone}`}>{info.label}</span>
+          <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[11px] font-bold ${DECISION_TONE[report.decision]}`}>{label}</span>
         </div>
         <p className="text-[11px] text-[#061f16]/60">
-          {report.signup.source} · cadastro em {formatDateTime(report.signup.createdAt)}
+          {report.signup.source} · {t.signedUp} {formatDateTime(report.signup.createdAt, t)}
         </p>
       </header>
 
-      <ul className="grid grid-cols-1 gap-1.5" aria-label="Relatório do cadastro">
+      <ul className="grid grid-cols-1 gap-1.5" aria-label={t.report}>
         {report.fields.map((f) => {
           const { icon: Icon, tone } = FIELD_ICON[f.status];
           return (
             <li key={f.field} className="flex items-start gap-2 text-xs">
               <Icon className={`w-4 h-4 shrink-0 ${tone}`} aria-hidden />
-              <span className="font-semibold text-[#061f16]/80 w-16 shrink-0">{FIELD_LABEL[f.field]}</span>
+              <span className="font-semibold text-[#061f16]/80 w-16 shrink-0">{t.field[f.field]}</span>
               <span className="text-[#061f16]/70 break-words min-w-0">{f.note}</span>
             </li>
           );
         })}
       </ul>
 
-      <ConsentBox report={report} />
+      <ConsentBox report={report} t={t} />
 
       {report.pending.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#061f16]/55">Para o dono resolver</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#061f16]/55">{t.pending}</p>
           <ul className="list-disc pl-4 text-xs text-[#061f16]/75 space-y-0.5">
             {report.pending.map((p) => (
               <li key={p}>{p}</li>
@@ -119,19 +191,17 @@ const SignupCard: React.FC<{ report: SignupReport; approval?: Approval; onDecide
         </div>
       )}
 
-      {report.draft && (
+      {report.draft && report.channel && (
         <div className="mt-auto space-y-2.5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#061f16]/55 flex items-center gap-1.5">
-            <ChannelIcon className="w-3.5 h-3.5" /> Rascunho para {report.channel === 'email' ? 'e-mail' : 'WhatsApp'}
+            <ChannelIcon className="w-3.5 h-3.5" /> {t.draftFor(t.channels[report.channel])}
           </p>
           <p className="rounded-2xl rounded-tl-sm bg-[#d4efbe]/60 border border-[#7FC453]/30 p-3 text-xs text-[#061f16] leading-relaxed">
             {report.draft}
           </p>
           {approval ? (
             <p className="text-[11px] font-semibold text-[#1E6B2E]" role="status">
-              {approval === 'approved'
-                ? 'Aprovado pelo dono. Na demonstração, nada é enviado.'
-                : 'Descartado. A Gina não envia nada.'}
+              {approval === 'approved' ? t.approved : t.discarded}
             </p>
           ) : (
             <div className="flex gap-2">
@@ -139,13 +209,13 @@ const SignupCard: React.FC<{ report: SignupReport; approval?: Approval; onDecide
                 onClick={() => onDecide('approved')}
                 className="flex-1 px-3 py-2 rounded-full bg-[#1E6B2E] hover:bg-[#14502a] text-[#f5f3ed] text-xs font-bold cursor-pointer transition-colors"
               >
-                Aprovar
+                {t.approve}
               </button>
               <button
                 onClick={() => onDecide('discarded')}
                 className="px-3 py-2 rounded-full bg-[#f5f3ed] hover:bg-[#e9efe2] text-[#061f16]/80 border border-[#061f16]/10 text-xs font-bold cursor-pointer transition-colors"
               >
-                Descartar
+                {t.discard}
               </button>
             </div>
           )}
@@ -155,40 +225,38 @@ const SignupCard: React.FC<{ report: SignupReport; approval?: Approval; onDecide
   );
 };
 
-export const WelcomeView: React.FC = () => {
-  const reports = useMemo(() => analyzeSignups(DEMO_SIGNUPS, DEMO_STORE), []);
+export const WelcomeView: React.FC<{ lang?: Lang }> = ({ lang = 'pt' }) => {
+  const t = TEXT[lang];
+  const reports = useMemo(() => {
+    const { store, signups } = getDemoSignups(lang);
+    return analyzeSignups(signups, store, lang);
+  }, [lang]);
   const [approvals, setApprovals] = useState<Record<string, Approval>>({});
 
   const summary = useMemo(() => {
     const counts = new Map<string, { group: string; tone: string; count: number }>();
     for (const r of reports) {
-      const { group, tone } = DECISION_INFO[r.decision];
-      const entry = counts.get(group) || { group, tone, count: 0 };
+      const [, group] = t.decision[r.decision];
+      const entry = counts.get(group) || { group, tone: DECISION_TONE[r.decision], count: 0 };
       entry.count++;
       counts.set(group, entry);
     }
     return [...counts.values()];
-  }, [reports]);
+  }, [reports, t]);
 
   return (
     <div className="max-w-[1360px] mx-auto px-4 md:px-8 py-8 space-y-8 animate-in fade-in duration-300 text-pretty">
       <section className="bg-[#ffffff] rounded-[24px] p-6 md:p-10 shadow-xs border border-[#061f16]/8 space-y-3">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#1E6B2E]">
           <UserPlus className="w-4 h-4" />
-          <span>Boas-vindas com consentimento</span>
+          <span>{t.eyebrow}</span>
         </div>
-        <h1 className="font-['Bagel_Fat_One'] text-3xl md:text-5xl text-[#1E6B2E] tracking-tight leading-tight">
-          Cadastrou? A Gina recebe.
-        </h1>
-        <p className="text-sm md:text-base text-[#061f16]/75 max-w-3xl leading-relaxed">
-          Cada cadastro novo passa por três checagens: a prova do consentimento (quando, o quê e por qual canal), a qualidade
-          dos dados e se a pessoa já existe na base. Quando dá para contatar, a Gina redige a boas-vindas no canal autorizado
-          e espera o dono aprovar. Nada é enviado sozinho.
-        </p>
-        <p className="text-[11px] text-[#061f16]/55">Cadastros fictícios de uma loja sem fluxo de boas-vindas.</p>
+        <h1 className="font-['Bagel_Fat_One'] text-3xl md:text-5xl text-[#1E6B2E] tracking-tight leading-tight">{t.title}</h1>
+        <p className="text-sm md:text-base text-[#061f16]/75 max-w-3xl leading-relaxed">{t.intro}</p>
+        <p className="text-[11px] text-[#061f16]/55">{t.fictional}</p>
       </section>
 
-      <section className="flex flex-wrap gap-2.5" aria-label="Resumo dos cadastros">
+      <section className="flex flex-wrap gap-2.5" aria-label={t.summary}>
         {summary.map(({ group, tone, count }) => (
           <span key={group} className={`px-3.5 py-1.5 rounded-full border text-xs font-bold ${tone}`}>
             {count} · {group}
@@ -201,6 +269,7 @@ export const WelcomeView: React.FC = () => {
           <SignupCard
             key={report.signup.id}
             report={report}
+            t={t}
             approval={approvals[report.signup.id]}
             onDecide={(a) => setApprovals((prev) => ({ ...prev, [report.signup.id]: a }))}
           />

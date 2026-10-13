@@ -74,3 +74,29 @@ test('phone and e-mail validation', () => {
   assert.equal(isValidEmail('a@b'), false);
   assert.equal(isValidEmail('a b@c.com'), false);
 });
+
+test('English showcase gets the same decisions with English copy', async () => {
+  const { getDemoSignups } = await import('../src/welcome/demoSignups.ts');
+  const { store, signups } = getDemoSignups('en');
+  const en = Object.fromEntries(analyzeSignups(signups, store, 'en').map((r) => [r.signup.id, r]));
+
+  for (const id of Object.keys(reports)) assert.equal(en[id].decision, reports[id].decision, `${id}: mesma decisão`);
+  assert.match(en['cad-01'].draft, /^Hi, Camila! So glad to have you at Demo Shop\..*reply STOP\.$/);
+  assert.match(en['cad-03'].draft, /unsubscribe link/);
+  assert.deepEqual(en['cad-02'].pending, ['Ask for their name on first contact and complete the record.']);
+  assert.match(en['cad-04'].pending[0], /^Consent without proof: missing date and time of opt-in and the text they agreed to\./);
+  assert.equal(en['cad-06'].pending[0], 'Same person as another signup (Website form): merge them before sending anything.');
+});
+
+test('English rhythm demo explains every demo customer without leftover Portuguese', async () => {
+  const { buildGinaCustomers } = await import('../src/integrations/salesforce/toGina.ts');
+  const { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } = await import('../src/integrations/salesforce/demoData.ts');
+  const { explainEn, taskSubjectEn } = await import('../src/components/salesforceViewText.ts');
+  for (const customer of buildGinaCustomers(DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY)) {
+    const text = explainEn(customer);
+    assert.ok(text && text.length > 20, `${customer.name}: explicação em inglês`);
+    assert.doesNotMatch(text, /\b(dias|ritmo|cliente|consentimento)\b|\(\w[^()]*\([^)]*\)\)/i, `${customer.name}: ${text}`);
+  }
+  const roberto = buildGinaCustomers(DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY).find((c) => c.name === 'Roberto Alves');
+  assert.equal(taskSubjectEn(roberto), 'Gina: personal contact with a VIP · Roberto Alves');
+});

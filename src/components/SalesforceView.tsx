@@ -6,6 +6,7 @@ import { buildOwnerTask } from '../integrations/salesforce/ownerTask';
 import { buildGinaCustomers } from '../integrations/salesforce/toGina';
 import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from '../integrations/salesforce/demoData';
 import type { GinaMood } from '../types/crm';
+import { ACTION_EN, CLASSIFICATION_EN, CONSENT_EN, consentSourceEn, explainEn, Lang, NUDGE_EN, taskSubjectEn, UI } from './salesforceViewText';
 
 type Source = 'demo' | 'org';
 type Action = GinaSalesforceCustomer['facts']['recommendedAction'];
@@ -73,9 +74,15 @@ const NUDGE_BY_CLASSIFICATION: Partial<Record<GinaSalesforceCustomer['facts']['c
   },
 };
 
-const actionFor = (customer: GinaSalesforceCustomer) => {
-  const base = ACTION_INFO[customer.facts.recommendedAction];
-  const nudge = customer.facts.recommendedAction === 'friendly_nudge' && NUDGE_BY_CLASSIFICATION[customer.facts.classification];
+const actionFor = (customer: GinaSalesforceCustomer, lang: Lang = 'pt') => {
+  const { recommendedAction, classification } = customer.facts;
+  const base = ACTION_INFO[recommendedAction];
+  const isNudge = recommendedAction === 'friendly_nudge';
+  if (lang === 'en') {
+    const nudge = isNudge && NUDGE_EN[classification];
+    return { ...base, ...ACTION_EN[recommendedAction], ...(nudge || {}) };
+  }
+  const nudge = isNudge && NUDGE_BY_CLASSIFICATION[classification];
   return nudge ? { ...base, ...nudge } : base;
 };
 
@@ -97,7 +104,7 @@ const CONSENT_INFO = {
   revoked: { label: 'Opt-out', tone: 'text-red-700' },
 } as const;
 
-const brl = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const brl = (value: number, locale = 'pt-BR') => value.toLocaleString(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 
 const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
@@ -110,22 +117,18 @@ type TaskState =
   | { status: 'done'; simulated?: boolean; created?: boolean; url?: string; subject?: string };
 
 /** Pedido de aprovação ao dono. Na demonstração só mostra a prévia; na org cria a Task. */
-const OwnerTaskButton: React.FC<{ state?: TaskState; onCreate: () => void }> = ({ state, onCreate }) => {
+const OwnerTaskButton: React.FC<{ state?: TaskState; onCreate: () => void; ui: (typeof UI)[Lang] }> = ({ state, onCreate, ui }) => {
   if (state?.status === 'done') {
     return (
       <div className="rounded-xl bg-[#e9efe2] border border-[#1E6B2E]/15 p-3 text-[11px] text-[#061f16]/80 space-y-1" role="status">
         <p className="font-bold text-[#1E6B2E] flex items-center gap-1.5">
           <ClipboardCheck className="w-3.5 h-3.5" />
-          {state.simulated
-            ? 'Prévia: na sua org, esta tarefa iria para o dono'
-            : state.created
-              ? 'Tarefa criada para o dono'
-              : 'Já existe uma tarefa da Gina aberta'}
+          {state.simulated ? ui.preview : state.created ? ui.created : ui.exists}
         </p>
         {state.subject && <p>{state.subject}</p>}
         {state.url && (
           <a href={state.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-[#1E6B2E] underline underline-offset-2">
-            Abrir na Salesforce <ExternalLink className="w-3 h-3" />
+            {ui.openInSalesforce} <ExternalLink className="w-3 h-3" />
           </a>
         )}
       </div>
@@ -140,7 +143,7 @@ const OwnerTaskButton: React.FC<{ state?: TaskState; onCreate: () => void }> = (
         className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#1E6B2E] hover:bg-[#14502a] text-[#f5f3ed] text-xs font-bold disabled:opacity-60 cursor-pointer transition-colors"
       >
         {state?.status === 'loading' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
-        Criar tarefa para o dono
+        {ui.createTask}
       </button>
       {state?.status === 'error' && (
         <p className="text-[11px] text-red-700" role="alert">
@@ -162,7 +165,8 @@ const localDemo = (): CustomersResponse => ({
  * @param demoOnly vitrine pública: só a demonstração, calculada no navegador,
  *   sem chamar o servidor e sem a opção de conectar uma org.
  */
-export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = false }) => {
+export const SalesforceView: React.FC<{ demoOnly?: boolean; lang?: Lang }> = ({ demoOnly = false, lang = 'pt' }) => {
+  const ui = UI[lang];
   const [source, setSource] = useState<Source>('demo');
   const [data, setData] = useState<CustomersResponse | null>(null);
   const [error, setError] = useState<{ code?: string; message: string } | null>(null);
@@ -174,7 +178,8 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
     if (demoOnly) {
       const customer = data?.customers.find((c) => c.contactId === contactId);
       const task = customer && buildOwnerTask(customer, DEMO_TODAY);
-      setTasks((prev) => ({ ...prev, [contactId]: { status: 'done', simulated: true, subject: task?.Subject } }));
+      const subject = task && customer && (lang === 'en' ? taskSubjectEn(customer) : task.Subject);
+      setTasks((prev) => ({ ...prev, [contactId]: { status: 'done', simulated: true, subject: subject || undefined } }));
       return;
     }
     setTasks((prev) => ({ ...prev, [contactId]: { status: 'loading' } }));
@@ -227,13 +232,13 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
   const summary = useMemo(() => {
     const counts = new Map<string, { label: string; tone: string; count: number }>();
     for (const c of data?.customers || []) {
-      const { label, tone } = actionFor(c);
+      const { label, tone } = actionFor(c, lang);
       const entry = counts.get(label) || { label, tone, count: 0 };
       entry.count++;
       counts.set(label, entry);
     }
     return [...counts.values()];
-  }, [data]);
+  }, [data, lang]);
 
   return (
     <div className="max-w-[1360px] mx-auto px-4 md:px-8 py-8 space-y-8 animate-in fade-in duration-300 text-pretty">
@@ -242,14 +247,13 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
         <div className="flex-1 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#1E6B2E]">
             <Cloud className="w-4 h-4" />
-            <span>{demoOnly ? 'Ritmo de compra · exemplo lido da Salesforce' : 'Gina na Salesforce'}</span>
+            <span>{demoOnly ? ui.demoEyebrow : ui.eyebrow}</span>
           </div>
           <h1 className="font-['Bagel_Fat_One'] text-3xl md:text-5xl text-[#1E6B2E] tracking-tight leading-tight">
-            Ela lê o seu CRM.
+            {ui.title}
           </h1>
           <p className="text-sm md:text-base text-[#061f16]/75 max-w-2xl leading-relaxed">
-            Contatos e pedidos da Salesforce passam pelas regras do método Gina Intell: ritmo pela mediana, recência, VIP
-            pela regra dos terços e consentimento. A Gina só lê e decide. Nada é enviado sem o dono aprovar.
+            {ui.intro}
           </p>
         </div>
 
@@ -285,11 +289,11 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#061f16]/70">
           <span className="inline-flex items-center gap-1.5 font-semibold">
             <Database className="w-3.5 h-3.5 text-[#1E6B2E]" />
-            {data.source === 'demo' ? 'Dados fictícios no formato Contact + Order da Salesforce' : 'Lido da sua org Salesforce'}
+            {data.source === 'demo' ? ui.demoSource : ui.orgSource}
           </span>
-          <span>Referência: {formatDate(data.referenceDate)}</span>
+          <span>{ui.reference}: {lang === 'en' ? data.referenceDate.slice(5).replace('-', '/') : formatDate(data.referenceDate)}</span>
           <span className="inline-flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5" /> Somente leitura
+            <Lock className="w-3.5 h-3.5" /> {ui.readOnly}
           </span>
         </div>
       )}
@@ -317,7 +321,7 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
 
       {/* Resumo */}
       {data && (
-        <section className="flex flex-wrap gap-2.5" aria-label="Resumo das decisões">
+        <section className="flex flex-wrap gap-2.5" aria-label={ui.summary}>
           {summary.map(({ label, tone, count }) => (
             <span key={label} className={`px-3.5 py-1.5 rounded-full border text-xs font-bold ${tone}`}>
               {count} · {label}
@@ -333,7 +337,7 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
         const buyers = data.customers.filter((c) => c.orderCount > 0);
         const withoutOrders = data.customers.filter((c) => c.orderCount === 0);
         const renderCard = (customer: GinaSalesforceCustomer) => {
-            const action = actionFor(customer);
+            const action = actionFor(customer, lang);
             const consent = CONSENT_INFO[customer.consent];
             const lastOrder = customer.orderDates[customer.orderDates.length - 1];
             const recency = lastOrder ? daysBetween(lastOrder, data.referenceDate) : null;
@@ -361,17 +365,18 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
                       )}
                     </h2>
                     <p className={`text-[11px] font-semibold ${consent.tone}`}>
-                      {consent.label} <span className="font-normal text-[#061f16]/50">· {customer.consentSource}</span>
+                      {lang === 'en' ? CONSENT_EN[customer.consent] : consent.label}{' '}
+                      <span className="font-normal text-[#061f16]/50">· {lang === 'en' ? consentSourceEn(customer.consentSource) : customer.consentSource}</span>
                     </p>
                   </div>
                 </header>
 
                 <dl className="grid grid-cols-4 gap-2 text-center">
                   {[
-                    ['Pedidos', String(customer.orderCount)],
-                    ['Gasto', brl(customer.totalSpending)],
-                    ['Ritmo', customer.facts.medianIntervalDays ? `${customer.facts.medianIntervalDays}d` : '—'],
-                    ['Última', recency !== null ? `${recency}d` : '—'],
+                    [ui.stats[0], String(customer.orderCount)],
+                    [ui.stats[1], brl(customer.totalSpending, ui.locale)],
+                    [ui.stats[2], customer.facts.medianIntervalDays ? `${customer.facts.medianIntervalDays}d` : '—'],
+                    [ui.stats[3], recency !== null ? `${recency}d` : '—'],
                   ].map(([term, value]) => (
                     <div key={term} className="rounded-xl bg-[#f5f3ed] py-2">
                       <dt className="text-[10px] uppercase tracking-wider text-[#061f16]/55 font-semibold">{term}</dt>
@@ -384,11 +389,11 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`px-3 py-1 rounded-full border text-xs font-bold ${action.tone}`}>{action.label}</span>
                     <span className="text-[11px] font-semibold text-[#061f16]/60">
-                      {CLASSIFICATION_LABEL[customer.facts.classification]}
-                      {customer.facts.ratio !== null && ` · ${customer.facts.ratio}x o ritmo`}
+                      {(lang === 'en' ? CLASSIFICATION_EN : CLASSIFICATION_LABEL)[customer.facts.classification]}
+                      {customer.facts.ratio !== null && ` · ${customer.facts.ratio}${ui.xRhythm}`}
                     </span>
                   </div>
-                  <p className="text-xs text-[#061f16]/75 leading-relaxed">{customer.facts.explanation}</p>
+                  <p className="text-xs text-[#061f16]/75 leading-relaxed">{lang === 'en' ? explainEn(customer) : customer.facts.explanation}</p>
                 </div>
 
                 <p className="mt-auto pt-3 border-t border-[#061f16]/8 text-[11px] text-[#061f16]/70 flex items-start gap-1.5">
@@ -397,7 +402,7 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
                 </p>
 
                 {buildOwnerTask(customer, new Date(`${data.referenceDate}T00:00:00Z`)) && (
-                  <OwnerTaskButton state={tasks[customer.contactId]} onCreate={() => createTask(customer.contactId)} />
+                  <OwnerTaskButton ui={ui} state={tasks[customer.contactId]} onCreate={() => createTask(customer.contactId)} />
                 )}
               </article>
             );
@@ -411,7 +416,7 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
             {withoutOrders.length > 0 && (
               <section className="space-y-4" aria-label="Contatos sem pedidos">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#061f16]/60">
-                  Sem pedidos registrados · {withoutOrders.length}
+                  {ui.noOrders} · {withoutOrders.length}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">{withoutOrders.map(renderCard)}</div>
               </section>

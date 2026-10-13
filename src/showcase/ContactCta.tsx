@@ -1,60 +1,81 @@
 import React from 'react';
 import { ArrowUpRight, Linkedin, Mail } from 'lucide-react';
+import type { Lang } from '../welcome/analyzeSignup';
 
 const EMAIL = 'iantunessp@gmail.com';
-const MAILTO = `mailto:${EMAIL}?subject=${encodeURIComponent('Quero ver a Gina na minha loja')}`;
+
+const TEXT = {
+  pt: {
+    subject: 'Quero ver a Gina na minha loja',
+    alt: 'Gina fazendo joinha',
+    title: 'Quer ver isso na sua loja?',
+    body: 'Em uma conversa curta, a gente olha o seu formulário de cadastro e o que acontece depois dele. Você sai sabendo o que falta para ter boas-vindas com consentimento.',
+    consulting: 'Conheça a consultoria',
+    behance: 'Veja a Gina no Behance',
+  },
+  en: {
+    subject: "I'd like to see Gina in my shop",
+    alt: 'Gina giving a thumbs-up',
+    title: 'Want this in your shop?',
+    body: "In a quick chat, we'll look at your signup form and what happens after it. You'll know exactly what's missing for a welcome flow with consent.",
+    consulting: 'See the consulting page',
+    behance: 'See Gina on Behance',
+  },
+};
 
 /** Chamada para contato ao fim da demonstração. Nenhum formulário: a vitrine não coleta dados. */
-export const ContactCta: React.FC = () => (
-  <section className="bg-[#ffffff] rounded-[24px] p-6 md:p-10 shadow-xs border border-[#061f16]/8 flex flex-col lg:flex-row lg:items-center gap-6" aria-labelledby="contato-titulo">
-    <img
-      src="/gina-complete.png"
-      alt="Gina fazendo joinha"
-      width={320}
-      height={356}
-      loading="lazy"
-      className="w-20 md:w-28 h-auto shrink-0 self-center lg:self-auto"
-    />
-    <div className="flex-1 space-y-2">
-      <h2 id="contato-titulo" className="font-['Bagel_Fat_One'] text-2xl md:text-4xl text-[#1E6B2E] tracking-tight leading-tight">
-        Quer ver isso na sua loja?
-      </h2>
-      <p className="text-sm md:text-base text-[#061f16]/75 max-w-2xl leading-relaxed">
-        Em uma conversa curta, a gente olha o seu formulário de cadastro e o que acontece depois dele. Você sai sabendo o que
-        falta para ter boas-vindas com consentimento.
-      </p>
-    </div>
-    <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0">
-      <a
-        href={MAILTO}
-        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1E6B2E] hover:bg-[#14502a] text-[#f5f3ed] text-sm font-bold transition-colors"
-      >
-        <Mail className="w-4 h-4" aria-hidden /> {EMAIL}
-      </a>
-      <a
-        href="https://www.linkedin.com/in/isaacnandes/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#f5f3ed] hover:bg-[#e9efe2] text-[#061f16] border border-[#061f16]/10 text-sm font-bold transition-colors"
-      >
-        <Linkedin className="w-4 h-4 text-[#1E6B2E]" aria-hidden /> LinkedIn
-      </a>
-      <a
-        href="https://isaacantunesfacha-dev.github.io/gina-crm/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-[#1E6B2E] hover:bg-[#14502a]/5 text-sm font-bold transition-colors"
-      >
-        Conheça a consultoria <ArrowUpRight className="w-4 h-4" aria-hidden />
-      </a>
-      <a
-        href="https://www.behance.net/gallery/256578105/Lifecycle-CRM-told-by-Gina"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-[#1E6B2E] hover:bg-[#14502a]/5 text-sm font-bold transition-colors"
-      >
-        Veja a Gina no Behance <ArrowUpRight className="w-4 h-4" aria-hidden />
-      </a>
-    </div>
-  </section>
-);
+export const ContactCta: React.FC<{ lang: Lang }> = ({ lang }) => {
+  const t = TEXT[lang];
+  const mailto = `mailto:${EMAIL}?subject=${encodeURIComponent(t.subject)}`;
+  const secondary =
+    'inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-[#1E6B2E] hover:bg-[#14502a]/5 text-sm font-bold transition-colors';
+
+  return (
+    <section
+      className="bg-[#ffffff] rounded-[24px] p-6 md:p-10 shadow-xs border border-[#061f16]/8 flex flex-col lg:flex-row lg:items-center gap-6"
+      aria-labelledby="contato-titulo"
+    >
+      <img
+        src="/gina-complete.png"
+        alt={t.alt}
+        width={320}
+        height={356}
+        loading="lazy"
+        className="w-20 md:w-28 h-auto shrink-0 self-center lg:self-auto"
+      />
+      <div className="flex-1 space-y-2">
+        <h2 id="contato-titulo" className="font-['Bagel_Fat_One'] text-2xl md:text-4xl text-[#1E6B2E] tracking-tight leading-tight">
+          {t.title}
+        </h2>
+        <p className="text-sm md:text-base text-[#061f16]/75 max-w-2xl leading-relaxed">{t.body}</p>
+      </div>
+      <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 flex-wrap">
+        <a
+          href={mailto}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1E6B2E] hover:bg-[#14502a] text-[#f5f3ed] text-sm font-bold transition-colors"
+        >
+          <Mail className="w-4 h-4" aria-hidden /> {EMAIL}
+        </a>
+        <a
+          href="https://www.linkedin.com/in/isaacnandes/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#f5f3ed] hover:bg-[#e9efe2] text-[#061f16] border border-[#061f16]/10 text-sm font-bold transition-colors"
+        >
+          <Linkedin className="w-4 h-4 text-[#1E6B2E]" aria-hidden /> LinkedIn
+        </a>
+        <a href="https://isaacantunesfacha-dev.github.io/gina-crm/" target="_blank" rel="noopener noreferrer" className={secondary}>
+          {t.consulting} <ArrowUpRight className="w-4 h-4" aria-hidden />
+        </a>
+        <a
+          href="https://www.behance.net/gallery/256578105/Lifecycle-CRM-told-by-Gina"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={secondary}
+        >
+          {t.behance} <ArrowUpRight className="w-4 h-4" aria-hidden />
+        </a>
+      </div>
+    </section>
+  );
+};

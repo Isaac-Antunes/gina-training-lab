@@ -64,3 +64,25 @@ export const DEMO_SIGNUPS: Signup[] = [
     consent: { checked: true, channels: ['whatsapp'], acceptedAt: '2026-10-10T14:30:00-03:00', text: CONSENT_TEXT },
   },
 ];
+
+const EN_SOURCE: Record<string, string> = {
+  'Formulário do site': 'Website form',
+  'QR code no balcão': 'QR code at the counter',
+  'Planilha antiga da loja': "The shop's old spreadsheet",
+  'Link da bio do Instagram': 'Instagram bio link',
+};
+
+const EN_CONSENT_TEXT = 'I agree to get news and offers from Demo Shop on the channels I checked. I can opt out anytime.';
+
+/** Os mesmos cadastros, com origem, texto aceito e loja na língua da vitrine. */
+export function getDemoSignups(lang: 'pt' | 'en'): { store: string; signups: Signup[] } {
+  if (lang === 'pt') return { store: DEMO_STORE, signups: DEMO_SIGNUPS };
+  return {
+    store: 'Demo Shop',
+    signups: DEMO_SIGNUPS.map((s) => ({
+      ...s,
+      source: EN_SOURCE[s.source] ?? s.source,
+      consent: { ...s.consent, text: s.consent.text ? EN_CONSENT_TEXT : undefined },
+    })),
+  };
+}
