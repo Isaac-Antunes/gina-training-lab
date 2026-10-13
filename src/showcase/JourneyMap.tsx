@@ -61,6 +61,10 @@ export const JourneyMap: React.FC<{ onOpenDemo: (tab: DemoTab) => void }> = ({ o
           A Gina confere, organiza e escreve. Você aprova. Abaixo, a jornada de um cliente na sua loja e onde ver cada etapa
           funcionando com dados fictícios.
         </p>
+        <p className="text-xs md:text-sm text-[#f5f3ed]/85 max-w-2xl leading-relaxed border-l-2 border-[#7FC453] pl-3">
+          Método criado por <strong className="font-bold">Isaac Antunes</strong>, analista sênior de CRM e lifecycle. Nos últimos
+          dois anos, no SBT, uma das maiores emissoras de TV aberta do Brasil.
+        </p>
       </div>
     </div>
 

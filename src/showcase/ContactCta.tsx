@@ -47,6 +47,14 @@ export const ContactCta: React.FC = () => (
       >
         Conheça a consultoria <ArrowUpRight className="w-4 h-4" aria-hidden />
       </a>
+      <a
+        href="https://www.behance.net/gallery/256578105/Lifecycle-CRM-told-by-Gina"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-[#1E6B2E] hover:bg-[#14502a]/5 text-sm font-bold transition-colors"
+      >
+        Veja a Gina no Behance <ArrowUpRight className="w-4 h-4" aria-hidden />
+      </a>
     </div>
   </section>
 );
