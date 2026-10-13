@@ -25,7 +25,7 @@ const TEXT = {
   },
 };
 
-/** Chamada para contato ao fim da demonstração. Nenhum formulário: a vitrine não coleta dados. */
+/** Chamada para contato ao fim da demonstração. Nenhum formulário: a vitrine não coleta dados pessoais. */
 export const ContactCta: React.FC<{ lang: Lang }> = ({ lang }) => {
   const t = TEXT[lang];
   const mailto = `mailto:${EMAIL}?subject=${encodeURIComponent(t.subject)}`;

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { SalesforceView } from '../components/SalesforceView';
 import { WelcomeView } from '../components/WelcomeView';
 import { ContactCta } from './ContactCta';
@@ -13,7 +14,8 @@ const TEXT = {
     switchTo: 'Read in English',
     title: 'Gina Intell · Demonstração',
     copyright: '© 2026 Isaac Antunes. Personagem Gina, ilustrações e método Gina Intell: todos os direitos reservados.',
-    privacy: 'Este site não coleta dados pessoais nem usa cookies. Os cadastros e clientes das demonstrações são fictícios.',
+    privacy:
+      'Este site não usa cookies nem coleta dados pessoais: contamos só as visitas, de forma anônima e agregada. Os cadastros e clientes das demonstrações são fictícios.',
   },
   en: {
     tabs: { welcome: 'Welcome', rhythm: 'Purchase rhythm' } as Record<DemoTab, string>,
@@ -22,7 +24,8 @@ const TEXT = {
     switchTo: 'Ler em português',
     title: 'Gina Intell · Demo',
     copyright: '© 2026 Isaac Antunes. Gina character, illustrations and the Gina Intell method: all rights reserved.',
-    privacy: "This site doesn't collect personal data or use cookies. The signups and customers in the demos are made up.",
+    privacy:
+      "This site doesn't use cookies or collect personal data: we only count visits, anonymously and in aggregate. The signups and customers in the demos are made up.",
   },
 };
 
@@ -141,6 +144,8 @@ export default function ShowcaseApp() {
           <p className="text-[11px] text-[#061f16]/60 text-pretty">{t.privacy}</p>
         </div>
       </footer>
+      {/* Vercel Web Analytics: só visitas, sem cookies. Sem eventos personalizados (exigem plano Pro). */}
+      <Analytics />
     </div>
   );
 }
