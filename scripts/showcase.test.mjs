@@ -21,9 +21,13 @@ const FORBIDDEN = [
   'expectedCriteria',
   'agentforce.com',
   'orgfarm',
-  '@gmail.com',
+  'isaacantunesfacha@',
   '99135',
 ];
+
+// Únicos arquivos que não são código: a imagem de prévia e a Gina 3D oficial.
+const ALLOWED_ASSETS = ['gina-3d.webp', 'og-gina.jpg'];
+const PUBLIC_EMAIL = 'iantunessp@gmail.com';
 
 async function listFiles(dir) {
   const out = [];
@@ -41,16 +45,18 @@ test('public showcase ships only the demos: no source ZIP, keys, prompts or pers
 
   assert.ok(files.some((f) => f.endsWith('showcase.html')));
   assert.deepEqual(
-    files.filter((f) => !/\.(html|js|css)$/.test(f)).map((f) => path.relative(outDir, f)),
-    [],
-    'só HTML, JS e CSS: nada da pasta public/ (onde fica o ZIP)'
+    files.filter((f) => !/\.(html|js|css)$/.test(f)).map((f) => path.relative(outDir, f)).sort(),
+    ALLOWED_ASSETS,
+    'só código e as duas imagens: nada da pasta public/ (onde fica o ZIP)'
   );
 
-  for (const file of files) {
+  for (const file of files.filter((f) => /\.(html|js|css)$/.test(f))) {
     const text = await readFile(file, 'utf8');
     for (const term of FORBIDDEN) {
       assert.equal(text.includes(term), false, `${path.relative(outDir, file)} contém "${term}"`);
     }
+    const emails = [...text.matchAll(/[\w.+-]+@[\w-]+\.[\w.]+/g)].map((m) => m[0]).filter((e) => !/\.(js|css|webp|jpg|png)$/.test(e));
+    assert.deepEqual([...new Set(emails)].filter((e) => e !== PUBLIC_EMAIL && !e.endsWith('@exemplo.com')), [], 'só o e-mail público do Isaac');
   }
 
   const html = await readFile(path.join(outDir, 'showcase.html'), 'utf8');

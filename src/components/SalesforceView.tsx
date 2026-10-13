@@ -242,7 +242,7 @@ export const SalesforceView: React.FC<{ demoOnly?: boolean }> = ({ demoOnly = fa
         <div className="flex-1 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#1E6B2E]">
             <Cloud className="w-4 h-4" />
-            <span>Gina na Salesforce</span>
+            <span>{demoOnly ? 'Ritmo de compra · exemplo lido da Salesforce' : 'Gina na Salesforce'}</span>
           </div>
           <h1 className="font-['Bagel_Fat_One'] text-3xl md:text-5xl text-[#1E6B2E] tracking-tight leading-tight">
             Ela lê o seu CRM.

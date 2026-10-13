@@ -8,7 +8,8 @@ import { defineConfig } from 'vite';
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  publicDir: false,
+  // Pasta pública só da vitrine (imagem de prévia e Gina 3D). Nunca public/, onde fica o ZIP.
+  publicDir: 'showcase-public',
   build: {
     outDir: 'dist-showcase',
     emptyOutDir: true,

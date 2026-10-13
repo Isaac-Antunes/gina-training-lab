@@ -1,43 +1,50 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { GinaCharacter } from '../components/GinaCharacter';
 import { SalesforceView } from '../components/SalesforceView';
 import { WelcomeView } from '../components/WelcomeView';
+import { ContactCta } from './ContactCta';
+import { DemoTab, JourneyMap } from './JourneyMap';
 
-type ShowcaseTab = 'welcome' | 'salesforce';
-
-const TABS: { id: ShowcaseTab; label: string }[] = [
+const TABS: { id: DemoTab; label: string }[] = [
   { id: 'welcome', label: 'Boas-vindas' },
-  { id: 'salesforce', label: 'Gina na Salesforce' },
+  { id: 'rhythm', label: 'Ritmo de compra' },
 ];
 
 /**
- * Vitrine pública do método Gina Intell: só as demonstrações, com dados
- * fictícios e regras calculadas no navegador. Sem servidor, sem chaves.
+ * Vitrine pública do método Gina Intell: jornada do lead, as demonstrações com
+ * dados fictícios (regras calculadas no navegador) e contato. Sem servidor, sem chaves.
  */
 export default function ShowcaseApp() {
-  const [tab, setTab] = useState<ShowcaseTab>('welcome');
+  const [tab, setTab] = useState<DemoTab>('welcome');
+  const demoRef = useRef<HTMLDivElement>(null);
+
+  const openDemo = (next: DemoTab) => {
+    setTab(next);
+    demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 w-full bg-[#eef6e6]/90 backdrop-blur-md border-b border-[#061f16]/10 px-4 md:px-8 py-3.5">
         <div className="max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E6B2E]"
+            aria-label="Gina Intell, voltar ao topo"
+          >
             <div className="w-8 h-8 rounded-full bg-[#f5f3ed] border border-[#14502a]/15 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
               <GinaCharacter mood="listening" size="mini" />
             </div>
             <span className="font-['Bagel_Fat_One'] text-xl md:text-2xl text-[#1E6B2E] tracking-tight leading-none">
               Gina <span className="text-[#061f16] font-sans font-extrabold text-sm uppercase tracking-widest ml-1">Intell</span>
             </span>
-          </div>
+          </button>
 
           <nav className="flex items-center gap-1.5 md:gap-3 text-xs md:text-sm font-semibold" aria-label="Demonstrações">
             {TABS.map(({ id, label }) => (
               <button
                 key={id}
-                onClick={() => {
-                  setTab(id);
-                  window.scrollTo({ top: 0 });
-                }}
+                onClick={() => openDemo(id)}
                 aria-current={tab === id ? 'page' : undefined}
                 className={`px-3 py-1.5 rounded-full transition-all cursor-pointer whitespace-nowrap ${
                   tab === id ? 'bg-[#1E6B2E] text-[#f5f3ed] shadow-xs' : 'text-[#061f16]/80 hover:text-[#1E6B2E] hover:bg-[#14502a]/5'
@@ -51,22 +58,28 @@ export default function ShowcaseApp() {
       </header>
 
       <main className="flex-1">
-        {tab === 'welcome' ? <WelcomeView /> : <SalesforceView demoOnly />}
+        <div className="max-w-[1360px] mx-auto px-4 md:px-8 pt-8">
+          <JourneyMap onOpenDemo={openDemo} />
+        </div>
+
+        {/* scroll-mt: o cabeçalho fixo não cobre o início da demo */}
+        <div ref={demoRef} className="scroll-mt-20">
+          {tab === 'welcome' ? <WelcomeView /> : <SalesforceView demoOnly />}
+        </div>
+
+        <div className="max-w-[1360px] mx-auto px-4 md:px-8 pb-10">
+          <ContactCta />
+        </div>
       </main>
 
       <footer className="border-t border-[#061f16]/10 px-6 py-6 bg-[#ffffff]/60">
-        <div className="max-w-[1360px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-[#1E6B2E]">
-          <span className="text-center sm:text-left text-pretty">
+        <div className="max-w-[1360px] mx-auto space-y-1.5 text-center sm:text-left text-xs text-[#1E6B2E]">
+          <p className="font-medium text-pretty">
             © 2026 Isaac Antunes. Personagem Gina, ilustrações e método Gina Intell: todos os direitos reservados.
-          </span>
-          <a
-            href="https://www.linkedin.com/in/isaacnandes/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-bold hover:underline hover:text-[#14502a] transition-colors"
-          >
-            Falar com o Isaac no LinkedIn
-          </a>
+          </p>
+          <p className="text-[11px] text-[#061f16]/60 text-pretty">
+            Este site não coleta dados pessoais nem usa cookies. Os cadastros e clientes das demonstrações são fictícios.
+          </p>
         </div>
       </footer>
     </div>

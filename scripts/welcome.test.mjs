@@ -20,7 +20,7 @@ test('missing name never invents one: neutral greeting and a pending item', () =
   assert.equal(r.decision, 'welcome_partial');
   assert.equal(r.fields.find((f) => f.field === 'nome').status, 'missing');
   assert.match(r.draft, /^Oi! Que bom ter você aqui\./);
-  assert.ok(r.pending.some((p) => /Sem nome/.test(p)));
+  assert.deepEqual(r.pending, ['Peça o nome no primeiro contato e complete o cadastro.'], 'pendência diz o que fazer, sem repetir o relatório');
 });
 
 test('invalid WhatsApp falls back to e-mail only because e-mail was also authorized', () => {
@@ -29,6 +29,8 @@ test('invalid WhatsApp falls back to e-mail only because e-mail was also authori
   assert.equal(r.channel, 'email');
   assert.equal(r.decision, 'welcome_partial');
   assert.ok(r.pending.some((p) => /Autorizou WhatsApp, mas o contato está inválido/.test(p)));
+  assert.match(r.draft, /link de descadastro/, 'e-mail ensina a sair pelo link');
+  assert.doesNotMatch(r.draft, /SAIR/);
 });
 
 test('checked box without date or text is not proof: blocked, no draft', () => {

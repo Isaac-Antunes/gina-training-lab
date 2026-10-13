@@ -83,11 +83,22 @@ function sameContact(a: Signup, b: Signup) {
 
 const CHANNEL_LABEL: Record<Channel, string> = { whatsapp: 'WhatsApp', email: 'e-mail' };
 
-export function buildWelcomeDraft(firstName: string | null, storeName: string): string {
+export function buildWelcomeDraft(firstName: string | null, storeName: string, channel: Channel): string {
   const greeting = firstName ? `Oi, ${firstName}!` : 'Oi! Que bom ter você aqui.';
   const thanks = firstName ? ` Que bom ter você com a gente na ${storeName}.` : ` Obrigada por se cadastrar na ${storeName}.`;
-  return `${greeting}${thanks} Sempre que chegar novidade do seu jeito, eu te aviso por aqui. Se preferir não receber mensagens, é só responder SAIR.`;
+  // Cada canal tem o seu jeito de sair: resposta no WhatsApp, link no e-mail.
+  const optOut =
+    channel === 'whatsapp'
+      ? 'Se preferir não receber mensagens, é só responder SAIR.'
+      : 'Se preferir não receber nossos e-mails, use o link de descadastro no fim desta mensagem.';
+  return `${greeting}${thanks} Sempre que chegar novidade do seu jeito, eu te aviso por aqui. ${optOut}`;
 }
+
+/** O que o dono faz com o nome; o relatório já diz o que está errado. */
+const NAME_ACTION: Partial<Record<FieldStatus, (note: string) => string>> = {
+  missing: () => 'Peça o nome no primeiro contato e complete o cadastro.',
+  warn: (note) => (note.includes('maiúsculas') ? 'Corrija o nome no cadastro (está todo em maiúsculas).' : ''),
+};
 
 /**
  * Analisa um cadastro. `allSignups` serve para achar duplicados: o cadastro
@@ -165,9 +176,10 @@ export function analyzeSignup(signup: Signup, allSignups: Signup[], storeName: s
   }
   if (!channel) return report('blocked_no_channel', null, null);
 
-  if (nameCheck.status !== 'ok') pending.push(nameCheck.note);
+  const nameAction = NAME_ACTION[nameCheck.status]?.(nameCheck.note);
+  if (nameAction) pending.push(nameAction);
   const decision: Decision = pending.length ? 'welcome_partial' : 'welcome_ready';
-  return report(decision, channel, buildWelcomeDraft(firstName, storeName));
+  return report(decision, channel, buildWelcomeDraft(firstName, storeName, channel));
 }
 
 export const analyzeSignups = (signups: Signup[], storeName: string) =>
