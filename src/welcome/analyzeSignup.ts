@@ -43,7 +43,7 @@ export interface SignupReport {
   duplicateOf?: string;
   decision: Decision;
   channel: Channel | null;
-  /** Pendências para o dono resolver, em linguagem direta. */
+  /** Pendências para o time resolver, em linguagem direta. */
   pending: string[];
   /** Rascunho da boas-vindas. Só existe quando dá para contatar. */
   draft: string | null;

@@ -5,35 +5,37 @@ import type { Lang } from '../welcome/analyzeSignup';
 export type DemoTab = 'welcome' | 'rhythm';
 
 /** Os modos da Gina, os mesmos do case no Behance. */
-type Mode = 'intake' | 'organize' | 'connect';
+type Mode = 'intake' | 'organize' | 'connect' | 'complete';
 
-const STEP_META: { demo: DemoTab; mode: Mode }[] = [
+/** demo null: a etapa faz parte do método, mas ainda não tem demonstração. */
+const STEP_META: { demo: DemoTab | null; mode: Mode }[] = [
   { demo: 'welcome', mode: 'intake' },
   { demo: 'welcome', mode: 'intake' },
   { demo: 'welcome', mode: 'organize' },
   { demo: 'welcome', mode: 'connect' },
-  { demo: 'rhythm', mode: 'connect' },
-  { demo: 'rhythm', mode: 'organize' },
+  { demo: null, mode: 'connect' },
+  { demo: 'rhythm', mode: 'complete' },
 ];
 
 /** Jornada do lead no método Gina Intell, com os mesmos termos da página de consultoria. */
 const TEXT = {
   pt: {
-    mode: { intake: 'Receber', organize: 'Organizar', connect: 'Conectar' } as Record<Mode, string>,
-    demo: { welcome: 'Ver na demo de boas-vindas', rhythm: 'Ver na demo de ritmo' } as Record<DemoTab, string>,
+    mode: { intake: 'Receber', organize: 'Organizar', connect: 'Conectar', complete: 'Concluir' } as Record<Mode, string>,
+    demo: { welcome: 'Ver na demo de boas-vindas', rhythm: 'Ver na demo de compra e recompra' } as Record<DemoTab, string>,
+    noDemo: 'Entra no diagnóstico',
     steps: [
       ['Cadastro', 'Alguém se cadastra no site, no balcão ou pelo Instagram.'],
       ['Prova de consentimento', 'Quando aceitou, qual texto e por qual canal. Sem prova, ninguém recebe nada.'],
       ['Relatório do cadastro', 'Nome, WhatsApp, e-mail e cadastro repetido: o que falta, a Gina aponta.'],
-      ['Boas-vindas', 'Rascunho no canal autorizado. Você aprova antes do envio.'],
-      ['Segunda compra', 'Quem comprou uma vez recebe um motivo para voltar.'],
-      ['Ritmo de compra', 'Em dia, atrasado (1,5×), dormente (3×) ou VIP, que só recebe contato pessoal.'],
+      ['Boas-vindas', 'A mensagem sai no canal que a pessoa autorizou, depois da revisão do time.'],
+      ['Relacionamento até a compra', 'Quem se cadastrou e ainda está decidindo recebe conteúdo no tempo certo, sem pressão, até a primeira compra.'],
+      ['Compra e recompra', 'Depois da compra, a Gina acompanha cada cliente: em dia, atrasado, dormente ou VIP, que só recebe contato pessoal.'],
     ],
     alt: 'Gina, a mascote verde-limão do método, acenando',
     eyebrow: 'Gina Intell · Demonstração',
     title: 'Do cadastro à recompra, cada passo com regra clara.',
     intro:
-      'Uma régua de relacionamento sob medida: a Gina confere, organiza e escreve, e você aprova. Abaixo, a jornada de um cliente na sua loja e onde ver cada etapa funcionando com dados fictícios.',
+      'Uma régua de relacionamento sob medida: a Gina confere, organiza e escreve, e o seu time aprova cada envio. Abaixo, a jornada de um cliente na sua loja e onde ver cada etapa funcionando com dados fictícios.',
     services: ['Régua de relacionamento', 'Automação de WhatsApp com aprovação', 'Boas-vindas', 'Recompra', 'Reativação de clientes', 'LGPD na prática'],
     byline: [
       'Método criado por ',
@@ -41,21 +43,22 @@ const TEXT = {
     ],
   },
   en: {
-    mode: { intake: 'Receive', organize: 'Organize', connect: 'Connect' } as Record<Mode, string>,
-    demo: { welcome: 'See it in the welcome demo', rhythm: 'See it in the rhythm demo' } as Record<DemoTab, string>,
+    mode: { intake: 'Receive', organize: 'Organize', connect: 'Connect', complete: 'Complete' } as Record<Mode, string>,
+    demo: { welcome: 'See it in the welcome demo', rhythm: 'See it in the purchase demo' } as Record<DemoTab, string>,
+    noDemo: 'Covered in the checkup',
     steps: [
       ['Signup', 'Someone signs up on your site, at the counter or through Instagram.'],
       ['Proof of consent', 'When they opted in, what they agreed to and on which channel. No proof, no message.'],
       ['Signup report', "Name, WhatsApp, email and duplicate records: whatever's missing, Gina flags it."],
-      ['Welcome', 'A draft on the channel they allowed. You approve it before it goes out.'],
-      ['Second purchase', 'Someone who bought once gets a reason to come back.'],
-      ['Purchase rhythm', 'On track, late (1.5×), dormant (3×) or VIP, who only gets personal contact.'],
+      ['Welcome', 'The message goes out on the channel they allowed, after your team reviews it.'],
+      ['Nurturing to first purchase', "Someone who signed up and is still deciding gets the right content at the right pace, no pressure, until they buy."],
+      ['Purchase and repeat', 'After they buy, Gina keeps an eye on every customer: on track, late, dormant or VIP, who only gets personal contact.'],
     ],
     alt: "Gina, the method's lime-green mascot, waving",
     eyebrow: 'Gina Intell · Demo',
     title: 'From signup to repeat purchase, every step follows a clear rule.',
     intro:
-      "Lifecycle flows built for your shop: Gina checks, organizes and writes, and you approve. Below is a customer's journey through your shop, and where to see each step working with made-up data.",
+      "Lifecycle flows built for your shop: Gina checks, organizes and writes, and your team approves every send. Below is a customer's journey through your shop, and where to see each step working with made-up data.",
     services: ['Lifecycle flows', 'WhatsApp automation with approval', 'Welcome', 'Repeat purchase', 'Win-back', 'Consent done right'],
     byline: [
       'Method created by ',
@@ -117,12 +120,16 @@ export const JourneyMap: React.FC<{ lang: Lang; onOpenDemo: (tab: DemoTab) => vo
                 </span>
               </div>
               <p className="text-[13px] text-[#d4efbe] leading-relaxed">{text}</p>
-              <button
-                onClick={() => onOpenDemo(demo)}
-                className="mt-auto self-start inline-flex items-center gap-1 text-xs font-bold text-[#9fdc6e] hover:text-[#f5f3ed] underline-offset-2 hover:underline cursor-pointer"
-              >
-                {t.demo[demo]} <ArrowRight className="w-3.5 h-3.5" aria-hidden />
-              </button>
+              {demo ? (
+                <button
+                  onClick={() => onOpenDemo(demo)}
+                  className="mt-auto self-start inline-flex items-center gap-1 text-xs font-bold text-[#9fdc6e] hover:text-[#f5f3ed] underline-offset-2 hover:underline cursor-pointer"
+                >
+                  {t.demo[demo]} <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+                </button>
+              ) : (
+                <span className="mt-auto self-start text-xs font-bold text-[#d4efbe]/70">{t.noDemo}</span>
+              )}
             </li>
           );
         })}

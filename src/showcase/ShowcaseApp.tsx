@@ -8,7 +8,7 @@ import type { Lang } from '../welcome/analyzeSignup';
 
 const TEXT = {
   pt: {
-    tabs: { welcome: 'Boas-vindas', rhythm: 'Ritmo de compra' } as Record<DemoTab, string>,
+    tabs: { welcome: 'Boas-vindas', rhythm: 'Compra e recompra' } as Record<DemoTab, string>,
     nav: 'Demonstrações',
     home: 'Gina Intell, voltar ao topo',
     switchTo: 'Read in English',
@@ -18,7 +18,7 @@ const TEXT = {
       'Este site não usa cookies nem coleta dados pessoais: contamos só as visitas, de forma anônima e agregada. Os cadastros e clientes das demonstrações são fictícios.',
   },
   en: {
-    tabs: { welcome: 'Welcome', rhythm: 'Purchase rhythm' } as Record<DemoTab, string>,
+    tabs: { welcome: 'Welcome', rhythm: 'Purchase and repeat' } as Record<DemoTab, string>,
     nav: 'Demos',
     home: 'Gina Intell, back to top',
     switchTo: 'Ler em português',

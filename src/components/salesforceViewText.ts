@@ -13,11 +13,11 @@ type Classification = Facts['classification'];
 export const UI = {
   pt: {
     locale: 'pt-BR',
-    demoEyebrow: 'Ritmo de compra · exemplo lido da Salesforce',
+    demoEyebrow: 'Compra e recompra · exemplo lido da Salesforce',
     eyebrow: 'Gina na Salesforce',
     title: 'Ela lê o seu CRM.',
     intro:
-      'Contatos e pedidos da Salesforce passam pelas regras do método Gina Intell: ritmo pela mediana, recência, VIP pela regra dos terços e consentimento. A Gina só lê e decide. Nada é enviado sem o dono aprovar.',
+      'Contatos e pedidos da Salesforce passam pelas regras do método Gina Intell: ritmo pela mediana, recência, VIP pela regra dos terços e consentimento. A Gina lê e decide; o envio é sempre uma decisão do time.',
     demoSource: 'Dados fictícios no formato Contact + Order da Salesforce',
     orgSource: 'Lido da sua org Salesforce',
     reference: 'Referência',
@@ -26,19 +26,19 @@ export const UI = {
     xRhythm: 'x o ritmo',
     noOrders: 'Sem pedidos registrados',
     summary: 'Resumo das decisões',
-    createTask: 'Criar tarefa para o dono',
-    preview: 'Prévia: na sua org, esta tarefa iria para o dono',
-    created: 'Tarefa criada para o dono',
+    createTask: 'Criar tarefa para o time',
+    preview: 'Prévia: na sua org, esta tarefa iria para o time',
+    created: 'Tarefa criada para o time',
     exists: 'Já existe uma tarefa da Gina aberta',
     openInSalesforce: 'Abrir na Salesforce',
   },
   en: {
     locale: 'en-US',
-    demoEyebrow: 'Purchase rhythm · example read from Salesforce',
+    demoEyebrow: 'Purchase and repeat · example read from Salesforce',
     eyebrow: 'Gina on Salesforce',
     title: 'She reads your CRM.',
     intro:
-      "Salesforce contacts and orders go through the Gina Intell rules: rhythm by the median, recency, VIP by the top-third rule, and consent. Gina only reads and decides. Nothing goes out without the owner's OK.",
+      "Salesforce contacts and orders go through the Gina Intell rules: rhythm by the median, recency, VIP by the top-third rule, and consent. Gina reads and decides; sending is always your team's call.",
     demoSource: 'Made-up data in the Salesforce Contact + Order format',
     orgSource: 'Read from your Salesforce org',
     reference: 'Reference date',
@@ -47,9 +47,9 @@ export const UI = {
     xRhythm: 'x their rhythm',
     noOrders: 'No orders on record',
     summary: 'Decision summary',
-    createTask: 'Create a task for the owner',
-    preview: 'Preview: in your org, this task would go to the owner',
-    created: 'Task created for the owner',
+    createTask: 'Create a task for your team',
+    preview: 'Preview: in your org, this task would go to your team',
+    created: 'Task created for your team',
     exists: "There's already an open Gina task",
     openInSalesforce: 'Open in Salesforce',
   },
@@ -57,7 +57,7 @@ export const UI = {
 
 export const ACTION_EN: Record<Action, { label: string; next: string }> = {
   no_message: { label: 'No message', next: "Smart silence: they're on their own rhythm." },
-  friendly_nudge: { label: 'Friendly reminder', next: 'Gina drafts the reminder; the owner approves before anything goes out.' },
+  friendly_nudge: { label: 'Friendly reminder', next: 'Gina drafts the reminder and it goes into the approval queue.' },
   concierge_human: { label: 'Personal contact', next: 'VIP: someone from the shop reaches out in person, no automation.' },
   dormancy_rest: { label: '90-day rest', next: 'No messages for 90 days, so it never turns into spam or an opt-out.' },
   refuse_spam: { label: "Don't contact", next: 'Blocked by consent. No message, not even for a VIP.' },
@@ -66,8 +66,8 @@ export const ACTION_EN: Record<Action, { label: string; next: string }> = {
 };
 
 export const NUDGE_EN: Partial<Record<Classification, { label: string; next: string }>> = {
-  new_customer: { label: 'Welcome', next: 'Gina drafts the welcome; the owner approves before anything goes out.' },
-  oneoff_delayed: { label: 'Nudge a 2nd purchase', next: 'Gina suggests a reason to come back; the owner approves before anything goes out.' },
+  new_customer: { label: 'Welcome', next: 'Gina gets the welcome ready for your team to review.' },
+  oneoff_delayed: { label: 'Nudge a 2nd purchase', next: 'Gina suggests a reason to come back; your team decides if and when to send it.' },
 };
 
 export const CLASSIFICATION_EN: Record<Classification, string> = {
@@ -106,7 +106,7 @@ export function explainEn(customer: GinaSalesforceCustomer): string {
     case 'vip_delayed':
       return `Top third in frequency and spend, last purchase ${r} days ago, at ${rhythm}. Personal contact from someone at the shop, no automation.`;
     case 'new_customer':
-      return `First purchase ${r} days ago (30 days or less). New customer: a welcome the owner approves.`;
+      return `First purchase ${r} days ago (30 days or less). New customer: time for a welcome.`;
     case 'oneoff_delayed':
       return `A single purchase ${r} days ago, over 30 days. Give them a reason for a second purchase.`;
     case 'incomplete_data':

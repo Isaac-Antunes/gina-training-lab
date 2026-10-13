@@ -28,7 +28,7 @@ const ACTION_INFO: Record<Action, { label: string; tone: string; mood: GinaMood;
     label: 'Lembrete amigável',
     tone: 'bg-[#7FC453]/25 text-[#14502a] border-[#7FC453]/40',
     mood: 'drafting',
-    next: 'A Gina redige o lembrete; o dono aprova antes de qualquer envio.',
+    next: 'A Gina redige o lembrete e ele entra na fila de aprovação.',
   },
   concierge_human: {
     label: 'Contato humano',
@@ -66,11 +66,11 @@ const ACTION_INFO: Record<Action, { label: string; tone: string; mood: GinaMood;
 const NUDGE_BY_CLASSIFICATION: Partial<Record<GinaSalesforceCustomer['facts']['classification'], { label: string; next: string }>> = {
   new_customer: {
     label: 'Boas-vindas',
-    next: 'A Gina redige as boas-vindas; o dono aprova antes de qualquer envio.',
+    next: 'A Gina prepara as boas-vindas para o time revisar.',
   },
   oneoff_delayed: {
     label: 'Estimular 2ª compra',
-    next: 'A Gina sugere um motivo para voltar; o dono aprova antes de qualquer envio.',
+    next: 'A Gina sugere um motivo para voltar; o time decide se e quando enviar.',
   },
 };
 
@@ -116,7 +116,7 @@ type TaskState =
   | { status: 'error'; message: string }
   | { status: 'done'; simulated?: boolean; created?: boolean; url?: string; subject?: string };
 
-/** Pedido de aprovação ao dono. Na demonstração só mostra a prévia; na org cria a Task. */
+/** Pedido de aprovação ao time. Na demonstração só mostra a prévia; na org cria a Task. */
 const OwnerTaskButton: React.FC<{ state?: TaskState; onCreate: () => void; ui: (typeof UI)[Lang] }> = ({ state, onCreate, ui }) => {
   if (state?.status === 'done') {
     return (
