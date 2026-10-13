@@ -1,4 +1,10 @@
+# Scripts de instalação (preinstall/postinstall) ficam bloqueados por padrão no pnpm 11.
+# Só libere pacote estritamente necessário e confiável; o resto fica negado de propósito.
+# Obs.: o pnpm 11 não lê mais o campo "pnpm" do package.json (onlyBuiltDependencies vira allowBuilds aqui).
 allowBuilds:
-  '@google/genai': set this to true or false
-  esbuild: set this to true or false
-  protobufjs: set this to true or false
+  # postinstall confere o binário nativo da plataforma (e baixa, se faltar). Necessário.
+  esbuild: true
+  # preinstall é um no-op ("echo 'preinstall: no-op'"). Não precisa rodar.
+  '@google/genai': false
+  # postinstall só imprime aviso de versão. Não precisa rodar.
+  protobufjs: false

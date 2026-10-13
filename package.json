@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@11.28.5",
   "scripts": {
     "dev": "node --import tsx server.ts",
     "predev": "node scripts/package-source.mjs",
@@ -26,7 +27,7 @@
     "og:render": "node scripts/render-og.mjs"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": "24.21.0"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
