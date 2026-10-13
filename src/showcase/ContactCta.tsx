@@ -6,18 +6,20 @@ const EMAIL = 'iantunessp@gmail.com';
 
 const TEXT = {
   pt: {
-    subject: 'Quero ver a Gina na minha loja',
+    subject: 'Quero o diagnóstico do cadastro',
+    offer: 'Diagnóstico do cadastro · 20 minutos',
     alt: 'Gina fazendo joinha',
     title: 'Quer ver isso na sua loja?',
-    body: 'Em uma conversa curta, a gente olha o seu formulário de cadastro e o que acontece depois dele. Você sai sabendo o que falta para ter boas-vindas com consentimento.',
+    body: 'Em 20 minutos, a gente olha o seu formulário de cadastro e o que acontece depois dele: a prova do consentimento, os dados que faltam e onde entra a boas-vindas. Você sai com a lista do que ajustar na sua régua de relacionamento.',
     consulting: 'Conheça a consultoria',
     behance: 'Veja a Gina no Behance',
   },
   en: {
-    subject: "I'd like to see Gina in my shop",
+    subject: "I'd like the signup checkup",
+    offer: '20-minute signup checkup',
     alt: 'Gina giving a thumbs-up',
     title: 'Want this in your shop?',
-    body: "In a quick chat, we'll look at your signup form and what happens after it. You'll know exactly what's missing for a welcome flow with consent.",
+    body: "In 20 minutes, we'll look at your signup form and what happens after it: proof of consent, missing data and where the welcome fits in. You'll walk away with a list of what to fix in your lifecycle flows.",
     consulting: 'See the consulting page',
     behance: 'See Gina on Behance',
   },
@@ -44,6 +46,7 @@ export const ContactCta: React.FC<{ lang: Lang }> = ({ lang }) => {
         className="w-20 md:w-28 h-auto shrink-0 self-center lg:self-auto"
       />
       <div className="flex-1 space-y-2">
+        <p className="text-xs font-bold uppercase tracking-widest text-[#1E6B2E]">{t.offer}</p>
         <h2 id="contato-titulo" className="font-['Bagel_Fat_One'] text-2xl md:text-4xl text-[#1E6B2E] tracking-tight leading-tight">
           {t.title}
         </h2>

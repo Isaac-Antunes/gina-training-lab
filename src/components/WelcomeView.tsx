@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
+  Info,
   Mail,
   MessageCircle,
   MinusCircle,
@@ -51,6 +52,10 @@ const TEXT = {
     discarded: 'Descartado. A Gina não envia nada.',
     approve: 'Aprovar',
     discard: 'Descartar',
+    channelNote: {
+      whatsapp: 'Template de marketing do WhatsApp: precisa de aprovação da Meta antes do primeiro uso, e cada envio é cobrado.',
+      email: 'E-mail de marketing: sempre com link de descadastro, de preferência de um clique, como Gmail e Yahoo exigem de quem envia em massa.',
+    },
     eyebrow: 'Boas-vindas com consentimento',
     title: 'Cadastrou? A Gina recebe.',
     intro:
@@ -85,6 +90,10 @@ const TEXT = {
     discarded: "Discarded. Gina doesn't send anything.",
     approve: 'Approve',
     discard: 'Discard',
+    channelNote: {
+      whatsapp: 'WhatsApp marketing template: it needs Meta approval before first use, and every send is billed.',
+      email: 'Marketing email: always include an unsubscribe link, ideally one-click, which Gmail and Yahoo require from bulk senders.',
+    },
     eyebrow: 'Welcome with consent',
     title: 'Signed up? Gina says hi.',
     intro:
@@ -198,6 +207,9 @@ const SignupCard: React.FC<{ report: SignupReport; t: Text; approval?: Approval;
           </p>
           <p className="rounded-2xl rounded-tl-sm bg-[#d4efbe]/60 border border-[#7FC453]/30 p-3 text-xs text-[#061f16] leading-relaxed">
             {report.draft}
+          </p>
+          <p className="flex items-start gap-1.5 text-[11px] text-[#061f16]/60 leading-snug">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden /> {t.channelNote[report.channel]}
           </p>
           {approval ? (
             <p className="text-[11px] font-semibold text-[#1E6B2E]" role="status">

@@ -33,7 +33,8 @@ const TEXT = {
     eyebrow: 'Gina Intell · Demonstração',
     title: 'Do cadastro à recompra, cada passo com regra clara.',
     intro:
-      'A Gina confere, organiza e escreve. Você aprova. Abaixo, a jornada de um cliente na sua loja e onde ver cada etapa funcionando com dados fictícios.',
+      'Uma régua de relacionamento sob medida: a Gina confere, organiza e escreve, e você aprova. Abaixo, a jornada de um cliente na sua loja e onde ver cada etapa funcionando com dados fictícios.',
+    services: ['Régua de relacionamento', 'Automação de WhatsApp com aprovação', 'Boas-vindas', 'Recompra', 'Reativação de clientes', 'LGPD na prática'],
     byline: [
       'Método criado por ',
       ', consultor de CRM e lifecycle. Nos últimos dois anos, analista de CRM no SBT, uma das maiores emissoras de TV aberta do Brasil.',
@@ -54,7 +55,8 @@ const TEXT = {
     eyebrow: 'Gina Intell · Demo',
     title: 'From signup to repeat purchase, every step follows a clear rule.',
     intro:
-      "Gina checks, organizes and writes. You approve. Below is a customer's journey through your shop, and where to see each step working with made-up data.",
+      "Lifecycle flows built for your shop: Gina checks, organizes and writes, and you approve. Below is a customer's journey through your shop, and where to see each step working with made-up data.",
+    services: ['Lifecycle flows', 'WhatsApp automation with approval', 'Welcome', 'Repeat purchase', 'Win-back', 'Consent done right'],
     byline: [
       'Method created by ',
       ", a CRM and lifecycle consultant. For the last two years, a CRM analyst at SBT, one of Brazil's largest free-to-air TV networks.",
@@ -81,6 +83,13 @@ export const JourneyMap: React.FC<{ lang: Lang; onOpenDemo: (tab: DemoTab) => vo
             {t.title}
           </h1>
           <p className="text-sm md:text-base text-[#d4efbe] max-w-2xl leading-relaxed">{t.intro}</p>
+          <ul className="flex flex-wrap gap-1.5" aria-label={lang === 'en' ? 'What it covers' : 'O que entra'}>
+            {t.services.map((service) => (
+              <li key={service} className="px-2.5 py-1 rounded-full bg-[#7FC453]/20 border border-[#7FC453]/40 text-[11px] font-bold text-[#f5f3ed]">
+                {service}
+              </li>
+            ))}
+          </ul>
           <p className="text-xs md:text-sm text-[#f5f3ed]/85 max-w-2xl leading-relaxed border-l-2 border-[#7FC453] pl-3">
             {t.byline[0]}
             <strong className="font-bold">Isaac Antunes</strong>
