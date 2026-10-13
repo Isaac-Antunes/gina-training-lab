@@ -26,7 +26,7 @@ const FORBIDDEN = [
 ];
 
 // Únicos arquivos que não são código: a imagem de prévia e as poses oficiais da Gina.
-const ALLOWED_ASSETS = ['gina-complete.png', 'gina-connect.png', 'gina-head.png', 'gina-intake.png', 'gina-organize.png', 'og-gina.jpg'];
+const ALLOWED_ASSETS = ['gina-complete.png', 'gina-connect.png', 'gina-head.png', 'gina-intake.png', 'gina-organize.png', 'og-gina-en.jpg', 'og-gina.jpg'];
 const PUBLIC_EMAIL = 'iantunessp@gmail.com';
 
 async function listFiles(dir) {
@@ -61,4 +61,11 @@ test('public showcase ships only the demos: no source ZIP, keys, prompts or pers
 
   const html = await readFile(path.join(outDir, 'showcase.html'), 'utf8');
   assert.match(html, /© 2026 Isaac Antunes\. Personagem Gina, ilustrações e método Gina Intell: todos os direitos reservados\./);
+  assert.match(html, /og:image" content="https:\/\/gina-intell\.vercel\.app\/og-gina\.jpg"/);
+
+  // O LinkedIn só lê metatags: o inglês precisa de página própria com a miniatura em inglês.
+  const en = await readFile(path.join(outDir, 'en.html'), 'utf8');
+  assert.match(en, /<html lang="en">/);
+  assert.match(en, /og:image" content="https:\/\/gina-intell\.vercel\.app\/og-gina-en\.jpg"/);
+  assert.match(en, /© 2026 Isaac Antunes\./);
 });

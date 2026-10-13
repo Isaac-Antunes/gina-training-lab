@@ -13,6 +13,7 @@ export default defineConfig({
   build: {
     outDir: 'dist-showcase',
     emptyOutDir: true,
-    rollupOptions: { input: 'showcase.html' },
+    // Uma página por língua: o LinkedIn lê só as metatags do HTML, não o JavaScript.
+    rollupOptions: { input: { pt: 'showcase.html', en: 'en.html' } },
   },
 });

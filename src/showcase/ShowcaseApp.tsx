@@ -28,8 +28,12 @@ const TEXT = {
 
 const LANG_KEY = 'gina-showcase-lang';
 
-/** ?lang=en no link manda direto; senão, a última escolha do visitante; senão, português. */
+/** /en é a página em inglês (com metatags e imagem de prévia próprias). */
+const isEnglishPath = () => /\/en(\.html)?\/?$/.test(window.location.pathname);
+
+/** /en ou ?lang=en mandam direto; senão, a última escolha do visitante; senão, português. */
 function initialLang(): Lang {
+  if (isEnglishPath()) return 'en';
   const fromUrl = new URLSearchParams(window.location.search).get('lang');
   if (fromUrl === 'en' || fromUrl === 'pt') return fromUrl;
   try {
@@ -55,8 +59,9 @@ export default function ShowcaseApp() {
     document.title = t.title;
     // O endereço acompanha a escolha: recarregar ou compartilhar mantém a língua.
     const url = new URL(window.location.href);
-    if (lang === 'en') url.searchParams.set('lang', 'en');
-    else url.searchParams.delete('lang');
+    url.searchParams.delete('lang');
+    if (lang === 'en' && !isEnglishPath()) url.searchParams.set('lang', 'en');
+    if (lang === 'pt' && isEnglishPath()) url.pathname = '/';
     window.history.replaceState(null, '', url);
     try {
       localStorage.setItem(LANG_KEY, lang);
