@@ -72,7 +72,7 @@ O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/
 3. ~~Botão "criar tarefa para o dono".~~ Feito em 12/10/2026: só lembrete, boas-vindas, 2ª compra e contato humano com VIP viram `Task` (assunto "Gina: …"); o servidor recalcula a decisão lendo a org e não duplica tarefa aberta. Na demonstração, só a prévia.
 4. ~~Gina como agente nativo do Agentforce.~~ Feito em 14/10/2026 (ver abaixo).
 5. ~~Empacotar.~~ Feito em 14/10/2026: pacote desbloqueado "Gina" 0.1.0-1, instalado numa org limpa (ver "Pacote").
-6. Entrar no Partner Program, criar o pacote gerenciado com namespace e publicar no AppExchange/AgentExchange.
+6. ~~Criar o pacote gerenciado com namespace.~~ Feito em 14/10/2026 (`Gina Intell` 0.1.0.1, ver "Pacote"). Falta entrar no Partner Program e passar na revisão de segurança antes de publicar no AppExchange/AgentExchange (adiado por decisão estratégica).
 7. Repetir no Coral Cloud e gravar um vídeo curto para o Behance e para o anúncio.
 
 ## Gina no Agentforce
@@ -83,7 +83,7 @@ A Gina também roda dentro da Salesforce, sem o servidor Node: é um agente inte
 - **Leitura com as permissões de quem pergunta.** `GinaService.cls` lê Contact e Order com `stripInaccessible` e `USER_MODE`. Campo de consentimento sem permissão de leitura conta como consentimento ausente, e o envio fica bloqueado.
 - **Três ações** (`@InvocableMethod`, categoria "Gina"): clientes que pedem ação, analisar cliente (por nome ou Id) e criar tarefa para o dono. A tarefa é a única escrita, recalcula a decisão e não duplica tarefa aberta.
 - **Agente em Agent Script:** `aiAuthoringBundles/Gina/Gina.agent`, em português, com as regras de governança nas instruções (nunca redige nem envia mensagem; consentimento manda).
-- **Testes Apex:** `GinaRulesTest` (mesmos casos de `salesforce.test.mjs`) e `GinaActionsTest` (registros de verdade, tarefa única, nada sem consentimento). 12 testes passando.
+- **Testes Apex:** `GinaRulesTest` (mesmos casos de `salesforce.test.mjs`) e `GinaActionsTest` (registros de verdade, tarefa única, nada sem consentimento) e `GinaJourneyTest` (jornadas do mesmo cliente ao longo do tempo). 17 testes passando (12 na primeira versão do pacote desbloqueado; ver [testes.md](testes.md)).
 
 Publicar numa org (uma vez):
 
@@ -117,4 +117,22 @@ sf package version create -v gina-dev --package Gina --installation-key-bypass -
 
 O `sf package create` reescreve o `sfdx-project.json` (tira `default` e `definitionFile`); confira o arquivo depois dele.
 
-Este pacote não tem namespace e por isso não pode ser anunciado no AppExchange. Para isso é preciso um pacote gerenciado de 2ª geração, com namespace registrado numa outra Developer Edition e ligado a este Dev Hub, e a revisão de segurança da Salesforce.
+Este pacote desbloqueado não tem namespace e por isso não pode ser anunciado no AppExchange. Ele fica como histórico.
+
+### Pacote gerenciado: Gina Intell (14/10/2026)
+
+- **Namespace** `ginaintell`, registrado numa Developer Edition separada (não a do Dev Hub) e **vinculado ao Dev Hub `gina-dev`** em Namespace Registries. Não apague a org do namespace.
+- **Pacote** `Gina Intell` (`0HogK0000004xZNSAY`), tipo gerenciado 2GP, criado com a chave `"namespace": "ginaintell"` no `sfdx-project.json`.
+- **Versão 0.1.0.1** (`04tgK000000RrHxQAK`): 99% de cobertura, meta atingida, **ainda não promovida** (`Released: false`). Link de instalação: `https://login.salesforce.com/packaging/installPackage.apexp?p0=04tgK000000RrHxQAK`.
+- **Atenção ao nome dos campos:** com namespace, os campos ganham o prefixo `ginaintell__`. O código usa `GinaRules.CONSENT_FIELD` e `IGNORED_FIELD` por isso (ver [o-que-deu-errado.md](o-que-deu-errado.md), item 1).
+
+Nova versão do pacote gerenciado:
+
+```bash
+cd salesforce
+sf package version create --package "Gina Intell" --installation-key-bypass --code-coverage --wait 30 --target-dev-hub gina-dev
+```
+
+Falta, para anunciar no AppExchange: entrar no Partner Program e passar pela revisão de segurança da Salesforce. A estratégia atual é vender como serviço (consultoria, design e o agente), então esses dois passos ficam para quando houver comprador em vista.
+
+Índice de toda a documentação: [README.md](README.md).

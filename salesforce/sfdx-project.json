@@ -3,7 +3,7 @@
     {
       "path": "force-app",
       "default": true,
-      "package": "Gina",
+      "package": "Gina Intell",
       "versionName": "Gina no Agentforce",
       "versionNumber": "0.1.0.NEXT",
       "versionDescription": "Regras do método Gina Intell em Apex, ações do Agentforce, campos e permissões da Gina.",
@@ -17,6 +17,9 @@
   "sourceApiVersion": "66.0",
   "packageAliases": {
     "Gina": "0HogK0000004xO5SAI",
-    "Gina@0.1.0-1": "04tgK000000RlIzQAK"
-  }
+    "Gina@0.1.0-1": "04tgK000000RlIzQAK",
+    "Gina Intell": "0HogK0000004xZNSAY",
+    "Gina Intell@0.1.0-1": "04tgK000000RrHxQAK"
+  },
+  "namespace": "ginaintell"
 }

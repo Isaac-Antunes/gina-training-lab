@@ -7,6 +7,13 @@ public with sharing class GinaRules {
     /** Prefixo do assunto: identifica as tarefas da Gina (e evita duplicar). */
     public static final String TASK_PREFIX = 'Gina:';
 
+    /**
+     * Nomes dos campos da Gina como a org os enxerga: num pacote gerenciado ganham o
+     * prefixo do namespace (ginaintell__), e as chaves de getPopulatedFieldsAsMap também.
+     */
+    public static final String CONSENT_FIELD = Contact.Gina_WhatsApp_Consent__c.getDescribe().getName();
+    public static final String IGNORED_FIELD = Contact.Gina_Ignored_Contacts__c.getDescribe().getName();
+
     /** Status de pedido que não contam como compra. */
     private static final Set<String> NON_PURCHASE_STATUSES = new Set<String>{
         'cancelled', 'canceled', 'cancelado', 'draft', 'rascunho'
@@ -60,7 +67,7 @@ public with sharing class GinaRules {
     public static List<String> readConsent(Contact contact) {
         Map<String, Object> fields = contact.getPopulatedFieldsAsMap();
         if (fields.get('HasOptedOutOfEmail') == true) return new List<String>{ 'revoked', 'HasOptedOutOfEmail' };
-        Object whatsapp = fields.get('Gina_WhatsApp_Consent__c');
+        Object whatsapp = fields.get(CONSENT_FIELD);
         if (whatsapp == 'revoked') return new List<String>{ 'revoked', 'Gina_WhatsApp_Consent__c' };
         if (whatsapp == 'granted') return new List<String>{ 'granted', 'Gina_WhatsApp_Consent__c' };
         return new List<String>{ 'missing', 'sem registro de consentimento' };
@@ -112,7 +119,7 @@ public with sharing class GinaRules {
             customer.consent = consent[0];
             customer.consentSource = consent[1];
 
-            Object ignored = c.getPopulatedFieldsAsMap().get('Gina_Ignored_Contacts__c');
+            Object ignored = c.getPopulatedFieldsAsMap().get(IGNORED_FIELD);
             customer.facts = evaluate(
                 orderDates,
                 today,
