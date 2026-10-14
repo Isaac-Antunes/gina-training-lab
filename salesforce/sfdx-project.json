@@ -1,5 +1,5 @@
 {
   "packageDirectories": [{ "path": "force-app", "default": true }],
   "name": "gina-salesforce",
-  "sourceApiVersion": "62.0"
+  "sourceApiVersion": "66.0"
 }

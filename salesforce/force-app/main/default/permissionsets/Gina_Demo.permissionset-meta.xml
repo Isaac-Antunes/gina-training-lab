@@ -1,7 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <label>Gina Demo</label>
-    <description>Libera para o usuário os campos que a Gina lê no Contato.</description>
+    <description>Libera para o usuário os campos que a Gina lê no Contato e as ações da Gina no Agentforce.</description>
+    <agentAccesses>
+        <agentName>Gina</agentName>
+        <enabled>true</enabled>
+    </agentAccesses>
+    <classAccesses>
+        <apexClass>GinaAnalyzeCustomerAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>GinaCreateOwnerTaskAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>GinaCustomersNeedingActionAction</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <hasActivationRequired>false</hasActivationRequired>
     <fieldPermissions>
         <editable>true</editable>

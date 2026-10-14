@@ -16,3 +16,7 @@ coverage/
 .sf/
 .sfdx/
 .vercel/
+
+# Gerados pelo "sf agent publish" (referências da org); a fonte é aiAuthoringBundles/Gina/Gina.agent
+salesforce/force-app/main/default/aiAgents/
+salesforce/force-app/main/default/aiAgentDefinitionVersions/
