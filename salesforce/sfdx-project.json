@@ -1,5 +1,22 @@
 {
-  "packageDirectories": [{ "path": "force-app", "default": true }],
+  "packageDirectories": [
+    {
+      "path": "force-app",
+      "default": true,
+      "package": "Gina",
+      "versionName": "Gina no Agentforce",
+      "versionNumber": "0.1.0.NEXT",
+      "versionDescription": "Regras do método Gina Intell em Apex, ações do Agentforce, campos e permissões da Gina.",
+      "definitionFile": "config/project-scratch-def.json"
+    },
+    {
+      "path": "agent"
+    }
+  ],
   "name": "gina-salesforce",
-  "sourceApiVersion": "66.0"
+  "sourceApiVersion": "66.0",
+  "packageAliases": {
+    "Gina": "0HogK0000004xO5SAI",
+    "Gina@0.1.0-1": "04tgK000000RlIzQAK"
+  }
 }
