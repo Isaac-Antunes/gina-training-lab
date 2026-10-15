@@ -70,4 +70,69 @@ O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/
 1. ~~Criar uma Developer Edition gratuita e ligar a tela à org.~~ Feito em 12/10/2026 (20 contatos de exemplo, nenhum pedido).
 2. ~~Importar os clientes de demonstração da Gina como Contact + Order na org.~~ Feito em 12/10/2026: os 9 clientes caem na mesma regra na org e no modo demonstração.
 3. ~~Botão "criar tarefa para o dono".~~ Feito em 12/10/2026: só lembrete, boas-vindas, 2ª compra e contato humano com VIP viram `Task` (assunto "Gina: …"); o servidor recalcula a decisão lendo a org e não duplica tarefa aberta. Na demonstração, só a prévia.
-4. Depois, repetir no Coral Cloud e gravar um vídeo curto para o Behance.
+4. ~~Gina como agente nativo do Agentforce.~~ Feito em 14/10/2026 (ver abaixo).
+5. ~~Empacotar.~~ Feito em 14/10/2026: pacote desbloqueado "Gina" 0.1.0-1, instalado numa org limpa (ver "Pacote").
+6. ~~Criar o pacote gerenciado com namespace.~~ Feito em 14/10/2026 (`Gina Intell` 0.1.0.1, ver "Pacote"). Falta entrar no Partner Program e passar na revisão de segurança antes de publicar no AppExchange/AgentExchange (adiado por decisão estratégica).
+7. Repetir no Coral Cloud e gravar um vídeo curto para o Behance e para o anúncio.
+
+## Gina no Agentforce
+
+A Gina também roda dentro da Salesforce, sem o servidor Node: é um agente interno (Employee Agent) que o dono abre no painel do Agentforce.
+
+- **Regras em Apex.** `GinaRules.cls` é o porte de `crmMath.ts`, `toGina.ts` e `ownerTask.ts`. Em 14/10/2026, nos 29 contatos da org, Apex e Node deram a mesma classificação, a mesma ação e o mesmo texto de explicação.
+- **Leitura com as permissões de quem pergunta.** `GinaService.cls` lê Contact e Order com `stripInaccessible` e `USER_MODE`. Campo de consentimento sem permissão de leitura conta como consentimento ausente, e o envio fica bloqueado.
+- **Três ações** (`@InvocableMethod`, categoria "Gina"): clientes que pedem ação, analisar cliente (por nome ou Id) e criar tarefa para o dono. A tarefa é a única escrita, recalcula a decisão e não duplica tarefa aberta.
+- **Agente em Agent Script:** `aiAuthoringBundles/Gina/Gina.agent`, em português, com as regras de governança nas instruções (nunca redige nem envia mensagem; consentimento manda).
+- **Testes Apex:** `GinaRulesTest` (mesmos casos de `salesforce.test.mjs`) e `GinaActionsTest` (registros de verdade, tarefa única, nada sem consentimento) e `GinaJourneyTest` (jornadas do mesmo cliente ao longo do tempo). 17 testes passando (12 na primeira versão do pacote desbloqueado; ver [testes.md](testes.md)).
+
+Publicar numa org (uma vez):
+
+```bash
+cd salesforce
+sf project deploy start -o gina-dev -d force-app -d agent --test-level RunSpecifiedTests --tests GinaRulesTest --tests GinaActionsTest
+sf agent publish authoring-bundle -o gina-dev --api-name Gina
+sf agent activate -o gina-dev -n Gina
+sf org assign permset -n Gina_Demo -o gina-dev     # ações e campos
+sf org assign permset -n Gina_Agente -o gina-dev   # o agente no painel
+```
+
+O Agentforce precisa estar ligado em Configuração → Agentes do Agentforce. O `sf agent publish` gera `aiAgents/` e `aiAgentDefinitionVersions/` com referências da org; esses arquivos ficam fora do Git e do pacote (`.gitignore` e `.forceignore`), porque a fonte é o `.agent`.
+
+Para testar sem abrir a org: `sf agent preview start -o gina-dev --authoring-bundle Gina --use-live-actions`. O CLI 2.153.5 falha no preview de agente interno sem `default_agent_user` ("reading 'replace'"); para o preview, ponha o seu usuário nessa linha temporariamente e tire antes de publicar.
+
+## Pacote
+
+A pasta `salesforce/force-app` é o pacote desbloqueado **Gina** (Dev Hub na org `gina-dev`): regras em Apex, as 3 ações, os 2 campos de Contact e o `Gina_Demo`. A versão 0.1.0-1 (`04tgK000000RlIzQAK`) passou nos 12 testes com 99% de cobertura e foi instalada numa org temporária limpa, onde a ação classificou uma cliente nova igual à org de desenvolvimento.
+
+O agente fica fora do pacote, em `salesforce/agent/`: o Agent Script (`AiAuthoringBundle`) não pode ser empacotado. No relatório de cobertura de metadados da v68.0 ele só tem Metadata API e Source Tracking. Quem instala publica o agente com `sf agent publish` e atribui o `Gina_Agente`. Para ir dentro do pacote, o agente teria de ser refeito no formato clássico (`GenAiPlannerBundle`, `GenAiPlugin`, `GenAiFunction`), que é empacotável inclusive como gerenciado.
+
+Os testes das ações rodam como um dono com `Gina_Demo`. Sem ele, os campos de consentimento não são legíveis, o consentimento conta como ausente e a Gina não sugere contato; `withoutReadAccessToConsentTheGinaNeverSuggestsContact` prova isso.
+
+Nova versão:
+
+```bash
+cd salesforce
+sf package version create -v gina-dev --package Gina --installation-key-bypass --code-coverage --wait 30
+```
+
+O `sf package create` reescreve o `sfdx-project.json` (tira `default` e `definitionFile`); confira o arquivo depois dele.
+
+Este pacote desbloqueado não tem namespace e por isso não pode ser anunciado no AppExchange. Ele fica como histórico.
+
+### Pacote gerenciado: Gina Intell (14/10/2026)
+
+- **Namespace** `ginaintell`, registrado numa Developer Edition separada (não a do Dev Hub) e **vinculado ao Dev Hub `gina-dev`** em Namespace Registries. Não apague a org do namespace.
+- **Pacote** `Gina Intell` (`0HogK0000004xZNSAY`), tipo gerenciado 2GP, criado com a chave `"namespace": "ginaintell"` no `sfdx-project.json`.
+- **Versão 0.1.0.1** (`04tgK000000RrHxQAK`): 99% de cobertura, meta atingida, **ainda não promovida** (`Released: false`). Link de instalação: `https://login.salesforce.com/packaging/installPackage.apexp?p0=04tgK000000RrHxQAK`.
+- **Atenção ao nome dos campos:** com namespace, os campos ganham o prefixo `ginaintell__`. O código usa `GinaRules.CONSENT_FIELD` e `IGNORED_FIELD` por isso (ver [o-que-deu-errado.md](o-que-deu-errado.md), item 1).
+
+Nova versão do pacote gerenciado:
+
+```bash
+cd salesforce
+sf package version create --package "Gina Intell" --installation-key-bypass --code-coverage --wait 30 --target-dev-hub gina-dev
+```
+
+Falta, para anunciar no AppExchange: entrar no Partner Program e passar pela revisão de segurança da Salesforce. A estratégia atual é vender como serviço (consultoria, design e o agente), então esses dois passos ficam para quando houver comprador em vista.
+
+Índice de toda a documentação: [README.md](README.md).

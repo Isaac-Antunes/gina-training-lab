@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Gina Agente</label>
+    <description>Libera o agente Gina no painel do Agentforce. Fica fora do pacote: o agente é publicado em cada org com sf agent publish. Use junto com Gina_Demo.</description>
+    <agentAccesses>
+        <agentName>Gina</agentName>
+        <enabled>true</enabled>
+    </agentAccesses>
+    <hasActivationRequired>false</hasActivationRequired>
+</PermissionSet>

@@ -1,0 +1,10 @@
+{
+  "orgName": "Gina - org de teste do pacote",
+  "edition": "Developer",
+  "language": "pt_BR",
+  "features": ["EnableSetPasswordInApi"],
+  "settings": {
+    "lightningExperienceSettings": { "enableS1DesktopEnabled": true },
+    "orderSettings": { "enableOrders": true }
+  }
+}
