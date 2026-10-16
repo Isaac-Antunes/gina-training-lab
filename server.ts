@@ -19,6 +19,7 @@ import { buildEvaluatorMessage, buildGinaScenarioMessage, EVALUATOR_SYSTEM_PROMP
 
 const findScenario = (id: unknown) => SCENARIOS.find((s) => s.id === id);
 import { globalSessionRateLimiter } from './src/utils/sessionRateLimiter';
+import { hostGuard } from './src/utils/hostGuard';
 
 // Local overrides precede .env; injected environment variables keep priority.
 dotenv.config({ path: ['.env.local', '.env'], quiet: true });
@@ -28,6 +29,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Só a própria máquina acessa: sem autenticação nas rotas, escutar em todas as interfaces
+// exporia a base da Salesforce (e a criação de tarefas) a qualquer um na mesma rede.
+const HOST = process.env.HOST || '127.0.0.1';
+app.use(hostGuard(process.env.HOST ? [process.env.HOST] : []));
 
 // Explicit 256KB payload limit with friendly 413 rejection (never silently truncate)
 app.use(express.json({ limit: '256kb' }));
@@ -772,7 +777,7 @@ async function startServer() {
     });
   }
 
-  const server = app.listen(PORT, () => {
+  const server = app.listen(Number(PORT), HOST, () => {
     console.log(`Gina Training Lab server running on http://localhost:${PORT}`);
     if (!apiKey) console.log('Modo manual ativo. Configure GEMINI_API_KEY em .env.local para habilitar IA.');
   });
