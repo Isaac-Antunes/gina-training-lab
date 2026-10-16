@@ -1,0 +1,15 @@
+Contexto: gina-training-lab é um laboratório de treino estático (HTML/TS, pnpm) com uma
+pasta salesforce/ (Agentforce, metadados sfdx). Não é um serviço público com dados de clientes.
+
+Ignore como falso positivo:
+- Achados em dist/, dist-showcase/, node_modules/, showcase-public/ (saída gerada ou dependências).
+- Arquivos *.test.mjs e *.test.ts (fixtures com credenciais fictícias).
+- Valores de exemplo e placeholders (YOUR_KEY, xxx, example.com) em docs/ e README.
+- innerHTML/DOM em páginas estáticas quando o conteúdo vem de constantes do próprio repositório.
+- Falta de rate limiting ou CSRF em server.ts quando ele só serve arquivos estáticos locais.
+
+NÃO ignore (reporte sempre):
+- Qualquer token, chave de API, senha ou Salesforce session/refresh token reais em qualquer arquivo.
+- Arquivos .env, auth URLs do sfdx ou JWT keys commitados.
+- Prompt injection em instruções do agente Agentforce (salesforce/agent) e permissões amplas em perfis ou permission sets.
+- Execução de comandos ou leitura de arquivos a partir de entrada do usuário (server.ts, scripts/).
