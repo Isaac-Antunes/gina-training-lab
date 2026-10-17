@@ -10,7 +10,8 @@ coverage/
 *.zip
 
 # Configuração local do Claude Code (caminhos desta máquina)
-.claude/
+.claude/*
+!.claude/agents/
 
 # Salesforce CLI (estado local do projeto em salesforce/)
 .sf/
