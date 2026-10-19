@@ -1,72 +1,71 @@
-# Como a Gina funciona
+# How Gina Works · Deterministic Policy & Action Architecture
 
-A Gina é uma camada de lifecycle de CRM para pequeno varejo. Ela lê clientes e pedidos, decide **uma coisa por cliente** e, quando a decisão pede uma pessoa, cria uma **tarefa para o dono**. Ela **nunca envia mensagem a um cliente**.
+Gina is a deterministic CRM lifecycle and governance layer for small retail operations. It reads customer profiles (`Contact`) and purchase histories (`Order`), computes **one deterministic classification per customer**, and—only when human intervention is warranted—creates a single **review task (`Task`) for the store owner**.
 
-## As quatro saídas possíveis
+**Hard Safety Invariant:** Gina **never** autonomously transmits messages to customers.
 
-| Saída | Significa | Vira tarefa? |
+## The Four Possible Policy Outcomes
+
+| Outcome | Meaning | Generates Owner Task? |
 |---|---|---|
-| Silêncio | Cliente em ritmo, em descanso ou sem consentimento. | Não |
-| Lembrete amigável | Atrasou um pouco, é cliente novo ou de compra única parada. | Sim, para o dono aprovar. |
-| Contato humano | Cliente VIP em atraso. Alguém da loja fala pessoalmente. | Sim, prioridade alta. |
-| Bloqueio | Sem consentimento, com opt-out, ou dado inválido. | Não |
+| **Silence (`no_message` / `dormancy_rest`)** | Customer is in rhythm, in a 90-day dormancy rest period, or lacks actionable urgency. | **No** |
+| **Friendly Nudge (`friendly_nudge` / `welcome_message` / `second_purchase_prompt`)** | Customer is moderately delayed, newly acquired ($\le 30$ days), or stalled after a single purchase ($> 30$ days). | **Yes** (`Normal` priority for owner approval) |
+| **Human Concierge (`concierge_human`)** | VIP customer in the delay window ($1.5 < \text{ratio} \le 3.0$). Requires personal outreach from the owner/team. | **Yes** (`High` priority) |
+| **Blocked (`refuse_spam` / `request_opt_in` / `request_data` / `reject_invalid_data`)** | Consent is missing or revoked, email opt-out is active, or input data is invalid/insufficient. | **No** |
 
-Princípio do método: **"Menos ruído. Mais relevância."**
+Core methodology principle: **"Less noise. More relevance."**
 
-## Ordem das decisões
+## Strict 10-Stage Decision Precedence
 
-`GinaRules.evaluate` aplica as regras sempre nesta ordem; a primeira que vale encerra a decisão.
+Both `analyzeCustomerRhythm` (`src/utils/crmMath.ts`) and `GinaRules.evaluate` (`GinaRules.cls`) evaluate rules in this exact sequential order; the first matching condition terminates evaluation:
 
-1. **Dado inválido** (gasto negativo): rejeita.
-2. **Consentimento revogado**: bloqueio absoluto, mesmo para VIP.
-3. **Consentimento ausente**: bloqueio; pede autorização em canal próprio.
-4. **Sem compras**: pede dados; não é VIP.
-5. **Datas inválidas ou futuras**: rejeita.
-6. **Um único dia de compra**: até 30 dias é *cliente novo* (boas-vindas); depois disso, *compra única parada* (convite à 2ª compra). Não inventa ritmo.
-7. **Dormência**: 3 ou mais contatos ignorados, **ou** recência acima de 3,0 vezes o ritmo. O descanso vence até o VIP.
-8. **VIP atrasado**: VIP com recência acima de 1,5 vez o ritmo → contato humano.
-9. **Em ritmo**: recência até 1,5 vez o ritmo → silêncio.
-10. **Atraso**: entre 1,5 e 3,0 vezes → lembrete amigável.
+1. **Invalid Financial Data** (negative total spend): Reject immediately (`reject_invalid_data`).
+2. **Revoked Consent**: Absolute block (`refuse_spam`), overriding even VIP status.
+3. **Missing Consent**: Block commercial messaging (`request_opt_in`); require explicit opt-in first.
+4. **Zero Purchases**: Request purchase history (`request_data`); never classify a non-buyer as VIP.
+5. **Invalid or Future Dates**: Reject corrupted or future-dated order timestamps (`reject_invalid_data`).
+6. **Single Purchase Day** (cannot infer a multi-order interval):
+   - Recency $\le 30$ days $\rightarrow$ **New Customer** (`welcome_message`).
+   - Recency $> 30$ days $\rightarrow$ **Single Purchase Stalled** (`second_purchase_prompt`).
+7. **90-Day Dormancy Protection**: Triggered when `ignoredContactsCount >= 3` **or** recency exceeds $3.0\times$ the median purchase interval (`ratio > 3.0`). Dormancy rest (`dormancy_rest`) overrides VIP status to prevent spam fatigue and opt-outs.
+8. **VIP in Delay Window**: Confirmed VIP with $1.5 < \text{ratio} \le 3.0$ $\rightarrow$ personal human outreach (`concierge_human`).
+9. **In Rhythm**: Recency within $1.5\times$ the median interval ($\text{ratio} \le 1.5$) $\rightarrow$ silence (`no_message`).
+10. **Standard Delay Window**: Recency between $1.5\times$ and $3.0\times$ the median interval ($1.5 < \text{ratio} \le 3.0$) $\rightarrow$ friendly reminder (`friendly_nudge`).
 
-O **ritmo** é a mediana dos intervalos entre dias de compra. A **razão** é recência dividida pelo ritmo. Razão exatamente 1,5 ainda conta como em ritmo.
+**Purchase Rhythm Definition:** The **median** of day intervals between chronologically sorted distinct purchase dates. The **ratio** is $\text{recencyDays} / \text{medianIntervalDays}$. A ratio of exactly $1.5$ is classified as **In Rhythm**; a ratio of exactly $3.0$ remains in the **Delay** window.
 
-## O que é VIP
+## Deterministic VIP Tier (RFV Rule of Thirds)
 
-Terço superior em **frequência e gasto ao mesmo tempo**, com ranking de competição para empates. A base precisa ter **pelo menos 3 compradores**; menos que isso não define VIP. Contato sem pedidos nunca entra no ranking. Pedidos cancelados ou em rascunho não contam como compra.
+A customer qualifies as **VIP** if and only if they rank in the **top third ($\lceil N / 3 \rceil$) simultaneously in both order frequency and total monetary spend**, using standard competition ranking (`1, 2, 2, 4`) for ties.
+- The active buyer base must contain **at least 3 customers with completed orders** ($N \ge 3$); smaller bases refuse to extrapolate percentiles.
+- Contacts with zero activated orders are excluded from the buyer pool and can never be classified as VIP.
+- Canceled or draft orders are excluded from frequency and spend calculations.
 
-## Consentimento (conservador)
+## Conservative Consent Resolution (Fail-Closed)
 
-Nunca presume autorização.
+Consent is never assumed:
 
-| Situação | Resultado |
+| CRM Signal | Resolved Consent State |
 |---|---|
-| Opt-out de e-mail do Contato | revogado |
-| Campo `Gina_WhatsApp_Consent__c` = `revoked` | revogado |
-| Campo = `granted` | concedido |
-| Qualquer outro caso, inclusive campo sem permissão de leitura | ausente (bloqueia) |
+| `Contact.HasOptedOutOfEmail == true` | `revoked` |
+| `Contact.Gina_WhatsApp_Consent__c == 'revoked'` | `revoked` |
+| `Contact.Gina_WhatsApp_Consent__c == 'granted'` | `granted` |
+| Null, blank, unknown value, or **field unreadable due to Field-Level Security (FLS)** | `missing` (blocks outreach) |
 
-## O que a Gina escreve
+## Bounded Write Capability
 
-**Uma única coisa: uma `Task`** com assunto `Gina: <título> · <cliente>`, na data de hoje, com o motivo da decisão. Antes de criar, ela recalcula a decisão lendo a org (não confia no que o pedido diz) e **não cria outra se já houver uma tarefa da Gina aberta** para o contato. A descrição sempre termina deixando claro que nada foi enviado.
+The only write operation performed by Gina is inserting a single Salesforce `Task` with subject `Gina: <action title> · <customer name>`, dated today, containing the deterministic audit rationale. Before inserting:
+1. The server/Apex service **re-queries the org and re-computes the policy decision** (ignoring any caller-supplied action).
+2. It checks for any existing open `Gina:%` task on the `Contact` (`IsClosed = false`) and refuses to create duplicates.
+3. Every task description explicitly states that no message was sent to the customer.
 
-## Peças
+## System Components
 
-| Peça | Papel |
+| Component | Role |
 |---|---|
-| `GinaRules` | Só matemática e regras: sem consulta, sem escrita, sem IA. |
-| `GinaService` | Lê Contact e Order com as permissões de quem pergunta; cria a Task. Teto de leitura de 5.000 contatos e 20.000 pedidos. |
-| `GinaCustomersNeedingActionAction` | Lista quem pede ação (só leitura). |
-| `GinaAnalyzeCustomerAction` | Explica a decisão de um cliente (só leitura). |
-| `GinaCreateOwnerTaskAction` | Cria a tarefa para o dono. |
-| Agente `Gina` (Agent Script) | Conversa em português no painel do Agentforce; só **explica** o que as ações devolvem. |
-
-O agente não calcula nada. Toda decisão vem das ações em Apex; por isso Apex e Node dão o mesmo resultado (conferido em 29/29 contatos).
-
-## Fluxo de um pedido
-
-1. O dono pergunta no painel do Agentforce.
-2. O agente chama uma ação.
-3. A ação lê Contact e Order **como o usuário que perguntou**.
-4. `GinaRules` calcula e devolve a decisão com a explicação.
-5. Se o dono aceitar, `create_owner_task` recalcula, cria a `Task` e para por aí.
-6. O dono aprova ou descarta e, se quiser, fala com o cliente por conta própria.
+| `GinaRules.cls` / `crmMath.ts` | Pure deterministic math and precedence rules: zero database writes, zero LLM calls. |
+| `GinaService.cls` | Queries `Contact` and `Order` under caller permissions (`USER_MODE` / `stripInaccessible`); creates idempotent owner `Task` records. Enforces governor safety caps (5,000 contacts / 20,000 orders). |
+| `GinaCustomersNeedingActionAction` | Read-only `@InvocableMethod` listing customers requiring owner attention. |
+| `GinaAnalyzeCustomerAction` | Read-only `@InvocableMethod` returning the deterministic breakdown for a specific customer. |
+| `GinaCreateOwnerTaskAction` | Audited `@InvocableMethod` that re-evaluates policy and creates an owner review `Task`. |
+| `Gina.agent` (Agent Script) | Conversational interface inside Salesforce Agentforce; strictly explains outputs returned by Apex actions without calculating metrics or drafting unapproved messages. |

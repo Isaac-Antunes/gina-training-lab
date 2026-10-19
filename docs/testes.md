@@ -1,66 +1,65 @@
-# Testes
+# Verification & Test Suite Documentation
 
-Estado em 14/10/2026: **17 testes Apex passando, 99% de cobertura na org**. O Salesforce mostra "18" porque conta junto o método de preparação (`@TestSetup`) de `GinaActionsTest`.
+Current Salesforce status: **17 Apex test methods passing with 99% org-wide code coverage** (Salesforce reports 18 execution entries because it includes the `@TestSetup` method in `GinaActionsTest`). On the Node/TypeScript side, **47 deterministic domain & security challenges** plus **all integration and parity suites** pass offline with zero external API calls.
 
-## O que cada arquivo prova
+## Salesforce Apex Test Architecture
 
-| Arquivo | Testes | O que prova |
+| Test Class | Methods | What It Proves |
 |---|---|---|
-| `GinaRulesTest` | 7 | Regras isoladas: do registro à decisão, consentimento, VIP, dormência, mediana, entradas inválidas. Mesmos casos de `scripts/salesforce.test.mjs`, para Apex e Node decidirem igual. |
-| `GinaActionsTest` | 5 | Ações contra registros de verdade: tarefa única e sem duplicata, nada quando a decisão não pede ação, nada sem leitura do consentimento. Rodam como dono com `Gina_Demo`. |
-| `GinaJourneyTest` | 5 | **Jornadas**: o mesmo cliente em datas diferentes (ver abaixo). Só regras, sem DML, rápidos. |
+| `GinaRulesTest` | 7 | Isolated deterministic rules: record-to-decision evaluation, consent resolution, VIP competition ranking, dormancy precedence, median calculation, and invalid input rejection. Uses the exact same fixtures as `scripts/salesforce.test.mjs` to guarantee cross-runtime parity. |
+| `GinaActionsTest` | 5 | Invocable actions against real SObject records: single task creation without duplicates, zero tasks when the policy recommends silence/block, and fail-closed behavior when Field-Level Security (FLS) denies consent read access. Runs as a store owner with `Gina_Demo`. |
+| `GinaJourneyTest` | 5 | **Longitudinal Customer Journeys:** Evaluates the same customer across multiple calendar dates without DML overhead. |
 
-## Jornadas (`GinaJourneyTest`)
+## Longitudinal Journeys (`GinaJourneyTest`)
 
-| Jornada | História | O que confere |
+| Journey | Timeline Progression | Verified Invariant |
 |---|---|---|
-| Cliente novo | Dia 6 boas-vindas → dia 15 em ritmo → dia 28 lembrete → 15/10 descanso | A decisão e a tarefa (ou o silêncio) a cada data. |
-| VIP | Em ritmo → atrasada (contato humano, prioridade alta) → dormente | O descanso vence o VIP; a tarefa de VIP é `High`. |
-| Consentimento revogado | VIP atrasada pede contato; depois opt-out ou revogação | Bloqueio total e nenhuma tarefa, apesar de VIP. |
-| Sem consentimento | Cliente novo que nunca disse sim | Nem as boas-vindas viram tarefa. |
-| Contatos ignorados | 2 ignorados ainda permitem lembrete; 3 levam ao descanso | A regra dos 3 contatos. |
+| **New Customer** | Day 6 welcome $\rightarrow$ Day 15 in rhythm $\rightarrow$ Day 28 friendly nudge $\rightarrow$ Dormancy rest | Verifies state transition and task eligibility (or silence) at each point in time. |
+| **VIP Lifecycle** | In rhythm $\rightarrow$ Delayed (human concierge, `High` priority) $\rightarrow$ Dormant | Proves 90-day dormancy overrides VIP status, and delayed VIPs generate `High` priority tasks. |
+| **Revoked Consent** | Delayed VIP initially eligible $\rightarrow$ Email opt-out or WhatsApp revocation | Proves immediate hard block and zero tasks despite VIP tier. |
+| **Missing Consent** | Newly acquired buyer who never granted opt-in | Proves not even a first-purchase welcome task is generated without consent. |
+| **Ignored Contacts Rule** | 2 ignored contacts still permit a friendly nudge $\rightarrow$ 3 ignored contacts trigger dormancy | Proves the strict 3-ignored-contacts dormancy threshold. |
 
-Cada jornada confere também que **nenhuma tarefa nasce quando a decisão é silêncio**. Assim a regra "menos ruído" é testada ao longo do tempo, e não só num instante.
+Every journey also asserts that **zero tasks are generated whenever the decision is silence or block**, testing the *"Less noise. More relevance."* invariant longitudinally across time.
 
-## Como rodar
+## Running the Test Suites
+
+### Node.js / TypeScript (Local, Zero API Calls)
+
+```bash
+npm run lint
+npm run scan
+npm test
+npm run build:showcase
+```
+
+### Salesforce DX / Apex
 
 ```bash
 cd salesforce
-export PATH=~/.local/node/bin:$PATH
 
-# Implantar e rodar tudo (org com Dev Hub, alias gina-dev)
+# Deploy metadata and run all local tests with code coverage (target org alias: gina-dev)
 sf project deploy start --source-dir force-app -o gina-dev
 sf apex run test --test-level RunLocalTests --result-format human --code-coverage --wait 10 -o gina-dev
 
-# Só as jornadas
+# Run only longitudinal journey tests
 sf apex run test --class-names GinaJourneyTest --result-format human --wait 10 -o gina-dev
 ```
 
-Do lado Node: `npm test` e `npm run scan` antes de qualquer commit.
+## Apex Code Coverage by Class
 
-## Cobertura por classe (14/10/2026)
-
-| Classe | Cobertura |
+| Apex Class | Coverage |
 |---|---|
-| GinaAnalyzeCustomerAction | 100% |
-| GinaCreateOwnerTaskAction | 100% |
-| GinaRules | 99% |
-| GinaService | 98% |
-| GinaCustomersNeedingActionAction | 95% |
-| **Org (média)** | **99%** |
+| `GinaAnalyzeCustomerAction` | 100% |
+| `GinaCreateOwnerTaskAction` | 100% |
+| `GinaRules` | 99% |
+| `GinaService` | 98% |
+| `GinaCustomersNeedingActionAction` | 95% |
+| **Org-Wide Average (`0.1.0.1`)** | **99%** |
 
-A versão gerenciada **0.1.0.1** também fechou em 99,00% (meta atingida).
+## How to Add a Longitudinal Journey
 
-## Como acrescentar uma jornada
-
-1. Em `GinaJourneyTest`, monte os `Contact` e `Order` com os auxiliares `contact(...)` e `order(...)`. Não escreva o nome do campo à mão: use `GinaRules.CONSENT_FIELD` e `GinaRules.IGNORED_FIELD` (ver `o-que-deu-errado.md`, item 1).
-2. Use `seenOn(nome, contatos, pedidos, hoje)` para ver o cliente em cada data.
-3. Confira a **classificação**, a **ação** e se há tarefa (`ownerTaskTitle`).
-4. Cuidado com as bordas: razão **exatamente 1,5** é "em ritmo"; **exatamente 3,0** ainda é "atraso".
-5. Cenário de varejo bom para testar traz: datas dos pedidos, consentimento e a decisão esperada em cada data.
-
-## O que os testes **não** cobrem
-
-- Muitos registros ao mesmo tempo (limites do Apex sob carga).
-- O agente conversando de verdade (a conversa foi conferida à mão, no painel).
-- A instalação do pacote gerenciado numa org limpa.
+1. In `GinaJourneyTest`, construct `Contact` and `Order` test instances using the `contact(...)` and `order(...)` helpers. Never hardcode custom field names as strings—always reference `GinaRules.CONSENT_FIELD` and `GinaRules.IGNORED_FIELD` so tests pass both in un-namespaced scratch orgs and in the `ginaintell` 2GP managed package (see [o-que-deu-errado.md](o-que-deu-errado.md), item 1).
+2. Call `seenOn(name, contacts, orders, todayDate)` to evaluate the customer at each simulated date.
+3. Assert the **classification**, **recommendedAction**, and **ownerTaskTitle** (`null` when silent/blocked).
+4. Pay attention to exact boundary values: a ratio of **exactly `1.5`** is classified as `in_rhythm`; a ratio of **exactly `3.0`** remains in `delay`.

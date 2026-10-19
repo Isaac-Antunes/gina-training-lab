@@ -1,15 +1,15 @@
-Contexto: gina-training-lab é um laboratório de treino estático (HTML/TS, pnpm) com uma
-pasta salesforce/ (Agentforce, metadados sfdx). Não é um serviço público com dados de clientes.
+Context: gina-training-lab is a local CRM & AI safety evaluation laboratory (TypeScript/React/Express, pnpm)
+with a Salesforce Agentforce module (`salesforce/`). The public deployment is a static showcase with synthetic data.
 
-Ignore como falso positivo:
-- Achados em dist/, dist-showcase/, node_modules/, showcase-public/ (saída gerada ou dependências).
-- Arquivos *.test.mjs e *.test.ts (fixtures com credenciais fictícias).
-- Valores de exemplo e placeholders (YOUR_KEY, xxx, example.com) em docs/ e README.
-- innerHTML/DOM em páginas estáticas quando o conteúdo vem de constantes do próprio repositório.
-- Falta de rate limiting ou CSRF em server.ts quando ele só serve arquivos estáticos locais.
+Ignore as false positives:
+- Findings inside generated output or dependency directories (`dist/`, `dist-showcase/`, `node_modules/`, `showcase-public/`).
+- Test files (`*.test.mjs`, `*.test.ts`, `run-challenges.ts`) containing synthetic attack fixtures or mock credentials.
+- Placeholder values (`YOUR_API_KEY`, `04t000000000000AAA`, `example.com`) in documentation and `.env.example`.
+- Static DOM rendering when content originates strictly from compile-time repository constants.
+- Absence of multi-tenant authentication or CSRF tokens on local-only loopback routes when `server.ts` is bound to `127.0.0.1` with `hostGuard`.
 
-NÃO ignore (reporte sempre):
-- Qualquer token, chave de API, senha ou Salesforce session/refresh token reais em qualquer arquivo.
-- Arquivos .env, auth URLs do sfdx ou JWT keys commitados.
-- Prompt injection em instruções do agente Agentforce (salesforce/agent) e permissões amplas em perfis ou permission sets.
-- Execução de comandos ou leitura de arquivos a partir de entrada do usuário (server.ts, scripts/).
+NEVER ignore (always report):
+- Any real API key, secret token, password, or Salesforce session/refresh token in any tracked file.
+- Committed `.env` files, SFDX auth URLs, or private cryptographic keys.
+- Unmitigated prompt-injection vectors in Agentforce agent definitions (`salesforce/agent`) or overly permissive Salesforce profiles/permission sets (`modifyAllData`, `viewAllData`).
+- Arbitrary command execution or path traversal from untrusted user input in `server.ts` or `scripts/`.

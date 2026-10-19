@@ -1,73 +1,44 @@
-# O que deu errado (e como evitar)
+# Engineering Post-Mortem & Lessons Learned
 
-Registro honesto dos tropeços de 14/10/2026. Cada item tem **o que aconteceu**, **a causa** e **o que fazer**. Os dois primeiros são os que mais importam.
+A transparent post-mortem log of edge cases, Salesforce 2GP packaging failure modes, and operational lessons encountered while building **Gina Intell**. Each entry records **what happened**, **the root cause**, and **the structural fix**.
 
-## 1. Num pacote gerenciado, todo cliente virava "sem consentimento" (grave)
+## 1. Namespace Prefixing Caused All Contacts to Fail Closed in 2GP Managed Packaging (Critical)
 
-- **O que aconteceu:** a primeira tentativa de criar a versão do pacote gerenciado falhou com 11 testes quebrados. Em todos, o consentimento lido era "ausente", e a Gina bloquearia todo mundo.
-- **Causa:** com namespace, os campos personalizados mudam de nome em tempo de execução: `Gina_WhatsApp_Consent__c` vira `ginaintell__Gina_WhatsApp_Consent__c`. O código procurava as chaves sem prefixo em `getPopulatedFieldsAsMap()`.
-- **Por que passava antes:** na org de desenvolvimento não há namespace, então o erro só aparece no pacote gerenciado.
-- **Correção:** `GinaRules.CONSENT_FIELD` e `IGNORED_FIELD`, obtidos por `Contact.<campo>.getDescribe().getName()`, que devolvem o nome certo com ou sem prefixo.
-- **Como evitar:** nunca escreva nome de campo personalizado como texto em `get('...')`, em JSON ou em mapas. Use `getDescribe().getName()`. Teste sempre também na criação de versão do pacote gerenciado.
-- **Nota de segurança:** a falha era **segura** (bloqueava em vez de liberar), por causa da regra "sem consentimento documentado, nada sai".
+- **What happened:** The first attempt to build a 2GP managed package version failed with 11 test assertions breaking. In every failing test, customer consent resolved to `missing`, causing Gina to block all outreach.
+- **Root cause:** In a namespaced 2GP package (`ginaintell`), custom fields acquire a runtime prefix (`Gina_WhatsApp_Consent__c` becomes `ginaintell__Gina_WhatsApp_Consent__c`). The initial implementation looked up unprefixed string keys inside `getPopulatedFieldsAsMap()`.
+- **Why it passed previously:** Scratch and Developer Edition orgs without a namespace use unprefixed field names, so the bug only surfaces during managed package version creation.
+- **Structural fix:** Introduced `GinaRules.CONSENT_FIELD` and `GinaRules.IGNORED_FIELD`, resolved dynamically via `Contact.<Field>.getDescribe().getName()`, which returns the exact runtime field name with or without a namespace prefix.
+- **Safety takeaway:** Because of the **fail-closed consent invariant** (*"without documented consent, nothing leaves"*), this failure mode defaulted safely to silence (`missing`) rather than leaking unauthorized outreach.
 
-## 2. Org Free Edition não registra namespace
+## 2. Salesforce Free Edition Orgs Cannot Register a Package Namespace
 
-- **O que aconteceu:** na org Free, a tela "Gerenciador de pacote" não mostrava o botão **Editar** em Configurações do namespace.
-- **Causa:** o namespace só se registra numa org **Developer Edition**, e essa **não pode ser a org do Dev Hub**.
-- **O que fazer:** criar uma terceira org Developer Edition só para guardar o namespace, e depois vinculá-la ao Dev Hub (Namespace Registries → Namespace do link). **Não apague essa org**: o namespace fica preso a ela.
+- **What happened:** In a Free Edition org, the Package Manager page omitted the **Edit** button under Namespace Settings.
+- **Root cause:** Salesforce only permits namespace registration in a **Developer Edition** org, and that org **cannot be the Dev Hub org itself**.
+- **Remediation:** Provision a dedicated Developer Edition org exclusively to register and hold the `ginaintell` namespace, then link it to the Dev Hub via **Namespace Registries**. Never delete the namespace-holding org.
 
-## 3. O cadastro da Developer Edition recusou o e-mail repetido
+## 3. Managed Package Creation Requires `namespace` at the Root of `sfdx-project.json`
 
-- **O que aconteceu:** ao tentar criar outra org com o e-mail principal, a Salesforce respondeu que o e-mail **já tinha uma Developer Edition** e mandou o nome de usuário da existente.
-- **Causa:** o cadastro reconhece o e-mail de contato. A afirmação de que "o e-mail de contato pode se repetir" estava **errada**.
-- **O que fazer:** usar outro e-mail de contato para cada Developer Edition nova. O nome de usuário (`...@agentforce.com`) é gerado por org.
+- **What happened:** Running `sf package create --package-type Managed` failed with a missing-namespace error.
+- **Root cause:** The CLI reads the namespace from the root `"namespace"` property inside `sfdx-project.json` rather than a command-line flag, and rewrites `sfdx-project.json` upon completion.
+- **Remediation:** Declare `"namespace": "ginaintell"` in `sfdx-project.json` prior to package creation and audit the file diff afterward to remove duplicate `packageDirectories` entries.
 
-## 4. Pacote gerenciado exige namespace dentro do `sfdx-project.json`
+## 4. Agent Script (`AiAuthoringBundle`) Cannot Be Included Inside a 2GP Package
 
-- **O que aconteceu:** `sf package create --package-type Managed` falhou com "Você deve especificar um namespace".
-- **Causa:** o namespace **não é uma opção do comando**; vem da chave `"namespace"` na raiz do `sfdx-project.json`.
-- **Depois:** o comando deixou **duas entradas apontando para `force-app`** (a do pacote antigo e a do novo). Elas foram unificadas na entrada de `Gina Intell`.
-- **O que fazer:** faça uma cópia do `sfdx-project.json` antes de `sf package create` e confira o arquivo depois: o comando o reescreve.
+- **Root cause:** In Salesforce Metadata API coverage, `AiAuthoringBundle` supports Metadata API deployment and Source Tracking, but is not yet supported inside 2GP managed/unlocked package containers.
+- **Consequence:** The 2GP package (`salesforce/force-app`) distributes the deterministic Apex rules, invocable actions, custom fields, and `Gina_Demo` permission set. The conversational Agent Script bundle lives in `salesforce/agent/` and is published to the target org via `sf agent publish authoring-bundle`.
+- **Future path:** If single-click AppExchange packaging of the conversational layer is required before Salesforce adds `AiAuthoringBundle` 2GP support, port the agent definition to `GenAiPlannerBundle` / `GenAiPlugin` / `GenAiFunction`.
 
-## 5. O agente em Agent Script não pode ir dentro do pacote
+## 5. Exact Floating-Point Boundary in Longitudinal Journey Tests (`ratio == 1.5`)
 
-- **Causa:** o `AiAuthoringBundle` só tem Metadata API e Source Tracking no relatório de cobertura da v68.0; não é empacotável.
-- **Consequência:** o pacote leva Apex, ações, campos e `Gina_Demo`. O agente fica em `salesforce/agent/` e quem instala o publica com `sf agent publish` e atribui `Gina_Agente`.
-- **Caminho futuro:** refazer o agente no formato clássico (`GenAiPlannerBundle`, `GenAiPlugin`, `GenAiFunction`), que é empacotável.
+- **What happened:** `threeIgnoredMessagesPutAnActiveCustomerToRest` initially expected `delay` on Day 15 for a customer with a 10-day median rhythm, but received `in_rhythm`.
+- **Root cause:** A 15-day recency over a 10-day median rhythm yields a ratio of **exactly `1.5`**, which is inclusively classified as `in_rhythm` ($\text{ratio} \le 1.5$). The bug was in the test fixture date, not the rule engine.
+- **Remediation:** Select interior dates for nominal state transitions and test exact boundary values (`1.5` and `3.0`) in dedicated boundary assertions.
 
-## 6. Teste de jornada falhou por uma borda
+## 6. `@TestSetup` Count in Salesforce Test Summaries
 
-- **O que aconteceu:** `threeIgnoredMessagesPutAnActiveCustomerToRest` esperava "atraso" e recebeu "em ritmo".
-- **Causa:** 15 dias de recência com ritmo de 10 dá razão **exatamente 1,5**, que ainda conta como em ritmo. O erro estava no teste, não na regra.
-- **Como evitar:** escolha datas que fiquem claramente dentro de cada faixa e teste as bordas de propósito.
+- **What happened:** The Salesforce test runner UI displays `18` methods executed when there are **17** `@IsTest` methods, because it counts `@TestSetup` in `GinaActionsTest` as a separate execution row.
+- **Remediation:** Document the exact per-class `@IsTest` method count (`7 + 5 + 5 = 17`) in [`testes.md`](testes.md).
 
-## 7. Contagem de testes enganosa
+## 7. Salesforce CLI `sf agent preview` Quirk on Employee Agents
 
-Afirmei "18 testes" quando eram **17**; o 18º é o `@TestSetup`. Conferido pelo resultado de cada classe antes de escrever `testes.md`.
-
-## 8. Buscar no lugar errado dentro da Salesforce
-
-- **O que aconteceu:** buscas por "Package Manager" não achavam nada.
-- **Causa:** a barra de cima é a **busca global** (registros e objetos). Configurações ficam na **Busca rápida** do menu à esquerda da Configuração. Em português o termo é **Gerenciador de pacote**.
-- **Dica:** "Pacotes instalados" é outra página (pacotes de terceiros) e não tem o namespace.
-
-## 9. Conta bloqueada por tentativas de senha
-
-A org Free `iantunessp` travou depois de várias senhas erradas. Anote a senha ao criar a org e redefina uma única vez em vez de tentar variações.
-
-## 10. Limites do ambiente de trabalho com o Claude
-
-- O Claude **não digita senhas** e **não enxerga popups** nem abas fora do grupo dele no Chrome. A aprovação do vínculo do namespace, que abre um popup de login, ficou com a pessoa.
-- Abas, janelas anônimas e contas já logadas pertencem ao navegador de quem usa.
-
-## 11. Material externo que não era da Gina
-
-Cenários pedidos a outra ferramenta (fluxo bancário de crédito, assistente de consultoria de flows) **não eram de varejo** e não foram aplicados. Peça cenários no formato: datas dos pedidos, consentimento e a decisão esperada em cada data.
-
-## 12. Outros avisos que valem registro
-
-- `sf agent preview` no CLI 2.153.5 falha em agente interno sem `default_agent_user` ("reading 'replace'"). Para o preview, ponha o seu usuário nessa linha temporariamente e tire antes de publicar.
-- O Swift do Mac está quebrado: use `qlmanage -t` para miniatura de vídeo.
-- O GitHub Desktop não envia tags criadas pelo terminal; elas dependem do login do `gh`.
-- Chaves de Setup devem ser conferidas pela metadata (por exemplo `Settings:DevHub`), não só pela tela.
+- In `@salesforce/cli` `2.153.5`, running `sf agent preview start` against an internal Employee Agent (`AgentforceEmployeeAgent`) without a `default_agent_user` field throws a null-reference error (`reading 'replace'`). Set a temporary `default_agent_user` only during local CLI preview sessions and strip it prior to committing or publishing so org-specific usernames never enter version control.

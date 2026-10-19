@@ -1,29 +1,31 @@
-# Documentação da Gina na Salesforce
+# Gina Technical Documentation & Salesforce Architecture
 
-Estado em **14/10/2026**. Cada documento responde a uma pergunta só.
+Each document in this directory addresses a specific architectural, safety, or operational dimension of **Gina Training Lab** and the **Gina Intell** Salesforce Agentforce governance layer.
 
-| Documento | Pergunta que responde | Quando ler |
+| Document | Core Question Answered | When to Read |
 |---|---|---|
-| [funcionamento.md](funcionamento.md) | Como a Gina decide e o que ela faz? | Para entender o produto ou mexer nas regras. |
-| [seguranca.md](seguranca.md) | O que impede a Gina de causar dano e o que ainda não foi verificado? | Antes de instalar numa org de cliente. |
-| [testes.md](testes.md) | O que está provado, como rodar e como acrescentar? | Antes de qualquer mudança no código. |
-| [o-que-deu-errado.md](o-que-deu-errado.md) | Que erros aconteceram e como evitá-los? | Antes de empacotar, publicar ou configurar uma org nova. |
-| [salesforce.md](salesforce.md) | Como conectar uma org, publicar o agente e gerar o pacote? | Para instalar e para gerar versões. |
+| [funcionamento.md](funcionamento.md) | How does Gina evaluate customers and bound agent actions? | Before understanding the domain model or modifying decision thresholds. |
+| [seguranca.md](seguranca.md) | What structural invariants prevent harm, and what remains out of scope? | Before deploying to a Salesforce org or auditing the safety model. |
+| [testes.md](testes.md) | What is empirically proven, how do tests run, and how are journeys added? | Before modifying TypeScript or Apex logic. |
+| [o-que-deu-errado.md](o-que-deu-errado.md) | What engineering failure modes occurred during 2GP packaging and how are they prevented? | Before packaging, publishing, or provisioning a new org. |
+| [salesforce.md](salesforce.md) | How do you connect a Salesforce org, publish the Agentforce bundle, and build a 2GP package? | When setting up local org integration or cutting package versions. |
+| `docs/assets/` | Visual architecture diagrams, character construction, and brand studies. | Reference assets for design and documentation. |
 
-## Mapa rápido do repositório
+## Repository Component Map
 
-| Caminho | O que é |
+| Path | Responsibility |
 |---|---|
-| `src/utils/crmMath.ts` | As regras originais em TypeScript (fonte da verdade do método). |
-| `salesforce/force-app/main/default/classes/` | As regras em Apex (`GinaRules`), a leitura da org (`GinaService`), as 3 ações do Agentforce e os testes. |
-| `salesforce/force-app/main/default/permissionsets/` | `Gina_Demo`: campos e ações. |
-| `salesforce/agent/` | O agente em Agent Script e o `Gina_Agente`. Fora do pacote. |
-| `salesforce/sfdx-project.json` | Pacote **Gina Intell** (gerenciado, namespace `ginaintell`). |
-| `playground/` | Seis cenários de referência do método, em texto. |
+| `src/utils/crmMath.ts` | Canonical deterministic CRM policy engine in TypeScript (source of truth for purchase rhythm, RFV competition ranking, and unit margin math). |
+| `src/utils/contextEngineering.ts` | Adversarial prompt-injection detector, Unicode normalizer, privilege-key purger, and consent conflict analyzer. |
+| `salesforce/force-app/main/default/classes/` | Deterministic Apex port (`GinaRules`), least-privilege org reader/task writer (`GinaService`), 3 Agentforce `@InvocableMethod` actions, and unit/journey tests. |
+| `salesforce/force-app/main/default/permissionsets/` | `Gina_Demo`: grants minimal read access to custom consent/ignored-contact fields and invocable actions. |
+| `salesforce/agent/` | Native Agentforce employee agent definition (`Gina.agent` in Agent Script) and `Gina_Agente` permission set. |
+| `salesforce/sfdx-project.json` | 2GP Managed Package configuration (**Gina Intell**, namespace `ginaintell`). |
+| `playground/` | Six canonical retail lifecycle scenarios (including adversarial consent/injection cases). |
 
-## Pacotes que existem
+## Salesforce Package Lineage
 
-| Pacote | Tipo | Namespace | Situação |
+| Package | Type | Namespace | Status |
 |---|---|---|---|
-| Gina | Desbloqueado | nenhum | 0.1.0-1, histórico. Não pode ir para o AppExchange. |
-| **Gina Intell** | **Gerenciado (2GP)** | `ginaintell` | 0.1.0.1, 99% de cobertura, **ainda não promovido** (`Released: false`). |
+| Gina | Unlocked | none | `0.1.0-1` (historical baseline; validated in a clean scratch org). |
+| **Gina Intell** | **Managed (2GP)** | `ginaintell` | `0.1.0.1` (**99% Apex code coverage**, verified across 17 unit & longitudinal journey tests). |

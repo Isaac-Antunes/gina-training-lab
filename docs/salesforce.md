@@ -1,138 +1,111 @@
-# Gina + Salesforce — engenharia reversa e recomendação
+# Gina + Salesforce Agentforce · Architecture & Integration Guide
 
-Estudo dos 29 repositórios públicos de [trailheadapps](https://github.com/trailheadapps) (10/10/2026) para decidir onde a Gina se conecta à Salesforce. Nada foi instalado nem criado em nenhuma conta.
+An architectural study and production integration guide for running **Gina Intell** on top of Salesforce and **Agentforce**.
 
-## Resumo
+## Executive Summary
 
-A Gina deve aparecer como **uma camada de lifecycle em cima da Salesforce**: lê clientes e compras, decide com as regras do método Gina Intell, redige a mensagem e **não envia nada sem o dono aprovar**. É isso que torna o projeto desejado: funciona no CRM que as empresas já usam, mostra governança de verdade e mede resultado com grupo de controle.
+Gina operates as a **deterministic lifecycle governance layer on top of Salesforce**: it reads `Contact` and `Order` records under the querying user's permissions, evaluates customer timing and RFV standing via pure mathematical rules, explains the result in plain language, and **never sends any message without human owner approval**.
 
-Recomendo dois passos:
+Two complementary integration modes are provided:
+1. **Local / Hybrid Connector (`src/integrations/salesforce/`):** Connects the local Node/React laboratory to a Salesforce Developer Edition org via read-only REST queries (`Contact` and `Order`) and idempotent `Task` creation.
+2. **Native Agentforce Employee Agent (`salesforce/`):** Runs 100% inside Salesforce via `GinaRules.cls`, `GinaService.cls`, three `@InvocableMethod` actions, and the `Gina.agent` authoring bundle—requiring no external Node server.
 
-1. **MVP numa Developer Edition gratuita**, com objetos padrão (Contact e Order) e os dados de varejo da própria Gina. Sem licença paga, cara de loja.
-2. **Vitrine no Coral Cloud**, o app de exemplo de Agentforce da Salesforce, para mostrar a Gina decidindo sobre os dados oficiais deles.
+## Trailhead Ecosystem Evaluation
 
-## O que cada app de exemplo oferece
+We evaluated the 29 public repositories in [trailheadapps](https://github.com/trailheadapps) to identify the cleanest integration targets:
 
-| App | Caso | Serve para a Gina? | Por quê |
+| Sample App | Domain | Suitable for Gina? | Rationale |
 |---|---|---|---|
-| **coral-cloud** | Resort (hospitalidade), Agentforce, Data Cloud, Prompts | **Sim, como vitrine** | Tem `Booking__c` com contato, data, valor, status e cancelamento: dá para calcular ritmo, recência, frequência e gasto por hóspede. É o exemplo oficial de agentes da Salesforce. Exige Data Cloud e Agentforce (org obtida pelo projeto Trailhead "Quick Start: Explore the Coral Cloud Sample App"). |
-| **ebikes-lwc** | Fabricante de bicicletas, pedidos de revendedores | Não | Os pedidos são B2B (revendedores). Não há cliente final com histórico de compras para medir ritmo. |
-| **agent-script-recipes** | Exemplos de Agent Script (Agentforce) | Referência futura | Útil se um dia a Gina virar um agente nativo do Agentforce. |
-| **apex-recipes**, **lwc-recipes** | Receitas de código | Referência | Padrões de integração e de tela, não dados. |
-| dreamhouse, easy-spaces, az-insurance, ecars e outros | Imobiliária, eventos, seguros… | Não | Fora do varejo; vários estão arquivados. |
+| **coral-cloud** | Hospitality resort, Agentforce, Data Cloud | **Yes (Showcase target)** | Models `Booking__c` with contact lookup, date, total price, status, and cancellation flags—enabling direct calculation of median rhythm, recency, frequency, and spend per guest. |
+| **ebikes-lwc** | B2B bicycle distributor | No | Orders represent wholesale reseller shipments rather than recurring end-customer retail purchases. |
+| **agent-script-recipes** | Agentforce Agent Script patterns | Reference | Canonical reference for `AiAuthoringBundle` syntax and action transitions. |
+| **apex-recipes** / **lwc-recipes** | Platform code patterns | Reference | Reference for `USER_MODE`, `stripInaccessible`, and invocable action patterns. |
 
-## Mapeamento: método Gina → campos do Coral Cloud
+### Domain Mapping: Gina Method $\rightarrow$ Coral Cloud Schema
 
-Lidos em `cc-base-app/main/default/objects`.
-
-| Conceito da Gina | Campo | Observação |
+| Gina Concept | Coral Cloud Field | Notes |
 |---|---|---|
-| Datas de compra (ritmo pela mediana) | `Booking__c.Date__c` | Uma reserva = uma compra. Ignorar `Is_Canceled__c = true`. |
-| Frequência | contagem de `Booking__c` por `Contact__c` | Também existe `Contact.Lifetime_Experience_Bookings__c`. |
-| Gasto | soma de `Booking__c.Total_Price__c` | Também existe `Contact.Lifetime_Value__c`. |
-| Recência | hoje − última `Date__c` | |
-| VIP (terço superior em frequência e gasto) | calculado pela Gina | `Contact.Level__c` pode servir de conferência. |
-| Consentimento | `Contact.HasOptedOutOfEmail` (campo padrão) | O Coral Cloud não modela consentimento por canal; para WhatsApp seria preciso um campo próprio. |
-| Contatos ignorados (regra dos 3) | não existe | Precisa de um objeto de interações ou de `Task`. |
-| Custo e margem | não existe | O exemplo não tem custo; a regra 9 cai no ramo "peça os custos". |
+| Purchase dates (median rhythm) | `Booking__c.Date__c` | One booking = one purchase event; exclude `Is_Canceled__c = true`. |
+| Frequency | Count of `Booking__c` per `Contact__c` | Also mirrored in `Contact.Lifetime_Experience_Bookings__c`. |
+| Total Spend | Sum of `Booking__c.Total_Price__c` | Also mirrored in `Contact.Lifetime_Value__c`. |
+| Recency | `today - max(Date__c)` | |
+| VIP Tier (top third in frequency & spend) | Computed deterministically by Gina | Can be cross-checked against `Contact.Level__c`. |
+| Consent | `Contact.HasOptedOutOfEmail` + custom channel field | Requires custom WhatsApp consent field (`Gina_WhatsApp_Consent__c`). |
 
-Hospitalidade não é varejo, mas a lógica é a mesma: o hóspede que voltava a cada 60 dias e sumiu há 150 é um caso de atraso.
+---
 
-## Como a integração funciona
+## How the Node $\leftrightarrow$ Salesforce Integration Works
 
-1. **Ler** contatos e compras pela API REST da Salesforce, com permissão **só de leitura**.
-2. **Calcular** ritmo, recência, VIP e consentimento com `src/utils/crmMath.ts` — matemática fora da IA, já testada.
-3. **Decidir e redigir** com o prompt único da Gina (`src/utils/ginaPrompts.ts`), recebendo os fatos calculados no passo 2.
-4. **Pedir aprovação**: a única escrita permitida é criar uma `Task` para o dono revisar. Nenhuma mensagem é enviada pela Gina.
-5. **Medir**: separar um grupo de controle (holdout) antes de qualquer campanha, como manda a regra 10.
+1. **Read-Only Discovery:** Queries `Contact` and `Order` over the Salesforce REST API (`v62.0`), dynamically inspecting `/sobjects/Contact/describe` so it only requests fields the current user has permission to read.
+2. **Deterministic Calculation:** Evaluates purchase rhythm, recency ratio, RFV competition rank, and consent status via [`src/utils/crmMath.ts`](../src/utils/crmMath.ts).
+3. **Human-in-the-Loop Approval:** The sole permitted write operation is `POST /services/data/v62.0/sobjects/Task` to create an owner review task (`Subject LIKE 'Gina:%'`), after verifying no open Gina task already exists for that contact.
+4. **Holdout Control Discipline:** Reserves a randomized control group prior to measuring campaign lift (Rule 10).
 
-O acesso usa o login do Salesforce CLI, sem aplicativo conectado; as credenciais ficam em `.env.local` e nunca no código.
+### Connecting a Developer Edition Org Locally
 
-### Conectar uma org (Developer Edition)
+1. Authenticate with Salesforce CLI:
+   ```bash
+   sf org login web --alias gina-dev --browser chrome
+   ```
+2. Export session credentials into `.env.local` (never prints the token to stdout):
+   ```bash
+   npm run sf:env
+   ```
+3. Deploy the Salesforce metadata and assign the permission set:
+   ```bash
+   cd salesforce
+   sf project deploy start -o gina-dev -d force-app
+   sf org assign permset -n Gina_Demo -o gina-dev
+   ```
+4. *(Optional — Developer Edition / scratch orgs only)* Seed the 9 synthetic retail customer profiles and 26 orders:
+   ```bash
+   npm run sf:seed
+   # To remove all synthetic seed records atomically:
+   npm run sf:seed -- --remove
+   ```
+5. Start the local server (`npm run dev`) and open **Salesforce $\rightarrow$ Live Org**.
 
-1. `sf org login web --alias gina-dev --browser chrome` e autorizar no navegador.
-2. `npm run sf:env`: copia a URL e o token do CLI para o `.env.local`, sem imprimir o token. O token expira com a sessão; se a tela der 401, rode de novo.
-3. Uma vez por org: `cd salesforce && sf project deploy start -o gina-dev -d force-app` (cria os campos `Gina_WhatsApp_Consent__c` e `Gina_Ignored_Contacts__c`) e `sf org assign permset -n Gina_Demo -o gina-dev` (libera a leitura deles e do opt-out).
-4. Opcional, só em Developer Edition ou sandbox: `npm run sf:seed` importa os 9 clientes de demonstração (conta "Loja demo da Gina", 26 pedidos, datas puxadas para hoje). `npm run sf:seed -- --remove` apaga tudo. A importação é atômica: se algo falha, nada fica na org.
-5. `npm run dev` e abrir a aba **Salesforce → Minha org**.
+---
 
-O conector pergunta à org quais campos o usuário pode ler (`/sobjects/Contact/describe`) e só pede esses. Sem `HasOptedOutOfEmail` ou sem os campos da Gina, a leitura continua; o consentimento fica "ausente" e o envio é bloqueado. Contatos sem pedidos ficam fora do ranking VIP.
+## Native Agentforce Architecture (`salesforce/`)
 
-## O que torna o projeto desejado
+Gina also runs natively inside Salesforce as an internal **Agentforce Employee Agent**:
 
-- **Encaixe real**: "ela vive no CRM que a loja já usa" deixa de ser promessa e vira demonstração na Salesforce.
-- **Governança visível**: consentimento bloqueia, a dormência dá descanso, o dono aprova. Exatamente o que gestores temem em IA de marketing.
-- **Resultado honesto**: holdout desde o primeiro dia, sem números inventados.
-- **Dados fictícios**: nenhum dado de cliente real, nenhuma questão de LGPD no portfólio.
+- **Cross-Runtime Apex Parity (`GinaRules.cls`):** Exact port of `crmMath.ts`, `toGina.ts`, and `ownerTask.ts`. Verified across 29 contact profiles to produce the exact same classification, action, and explanation string as Node/TypeScript.
+- **Caller-Scoped Security (`GinaService.cls`):** Enforces `with sharing`, `Security.stripInaccessible(AccessType.READABLE, ...)`, and `WITH USER_MODE`. Unreadable consent fields fail closed (`missing`).
+- **Three `@InvocableMethod` Actions:**
+  - `GinaCustomersNeedingActionAction`
+  - `GinaAnalyzeCustomerAction`
+  - `GinaCreateOwnerTaskAction`
+- **Agent Script Bundle (`Gina.agent`):** Located at `salesforce/agent/main/default/aiAuthoringBundles/Gina/Gina.agent`.
 
-## Próximos passos
-
-1. ~~Criar uma Developer Edition gratuita e ligar a tela à org.~~ Feito em 12/10/2026 (20 contatos de exemplo, nenhum pedido).
-2. ~~Importar os clientes de demonstração da Gina como Contact + Order na org.~~ Feito em 12/10/2026: os 9 clientes caem na mesma regra na org e no modo demonstração.
-3. ~~Botão "criar tarefa para o dono".~~ Feito em 12/10/2026: só lembrete, boas-vindas, 2ª compra e contato humano com VIP viram `Task` (assunto "Gina: …"); o servidor recalcula a decisão lendo a org e não duplica tarefa aberta. Na demonstração, só a prévia.
-4. ~~Gina como agente nativo do Agentforce.~~ Feito em 14/10/2026 (ver abaixo).
-5. ~~Empacotar.~~ Feito em 14/10/2026: pacote desbloqueado "Gina" 0.1.0-1, instalado numa org limpa (ver "Pacote").
-6. ~~Criar o pacote gerenciado com namespace.~~ Feito em 14/10/2026 (`Gina Intell` 0.1.0.1, ver "Pacote"). Falta entrar no Partner Program e passar na revisão de segurança antes de publicar no AppExchange/AgentExchange (adiado por decisão estratégica).
-7. Repetir no Coral Cloud e gravar um vídeo curto para o Behance e para o anúncio.
-
-## Gina no Agentforce
-
-A Gina também roda dentro da Salesforce, sem o servidor Node: é um agente interno (Employee Agent) que o dono abre no painel do Agentforce.
-
-- **Regras em Apex.** `GinaRules.cls` é o porte de `crmMath.ts`, `toGina.ts` e `ownerTask.ts`. Em 14/10/2026, nos 29 contatos da org, Apex e Node deram a mesma classificação, a mesma ação e o mesmo texto de explicação.
-- **Leitura com as permissões de quem pergunta.** `GinaService.cls` lê Contact e Order com `stripInaccessible` e `USER_MODE`. Campo de consentimento sem permissão de leitura conta como consentimento ausente, e o envio fica bloqueado.
-- **Três ações** (`@InvocableMethod`, categoria "Gina"): clientes que pedem ação, analisar cliente (por nome ou Id) e criar tarefa para o dono. A tarefa é a única escrita, recalcula a decisão e não duplica tarefa aberta.
-- **Agente em Agent Script:** `aiAuthoringBundles/Gina/Gina.agent`, em português, com as regras de governança nas instruções (nunca redige nem envia mensagem; consentimento manda).
-- **Testes Apex:** `GinaRulesTest` (mesmos casos de `salesforce.test.mjs`) e `GinaActionsTest` (registros de verdade, tarefa única, nada sem consentimento) e `GinaJourneyTest` (jornadas do mesmo cliente ao longo do tempo). 17 testes passando (12 na primeira versão do pacote desbloqueado; ver [testes.md](testes.md)).
-
-Publicar numa org (uma vez):
+### Deploying and Publishing the Agentforce Bundle
 
 ```bash
 cd salesforce
 sf project deploy start -o gina-dev -d force-app -d agent --test-level RunSpecifiedTests --tests GinaRulesTest --tests GinaActionsTest
 sf agent publish authoring-bundle -o gina-dev --api-name Gina
 sf agent activate -o gina-dev -n Gina
-sf org assign permset -n Gina_Demo -o gina-dev     # ações e campos
-sf org assign permset -n Gina_Agente -o gina-dev   # o agente no painel
+sf org assign permset -n Gina_Demo -o gina-dev     # Grants access to custom fields & Apex actions
+sf org assign permset -n Gina_Agente -o gina-dev   # Grants access to the Agentforce agent panel
 ```
 
-O Agentforce precisa estar ligado em Configuração → Agentes do Agentforce. O `sf agent publish` gera `aiAgents/` e `aiAgentDefinitionVersions/` com referências da org; esses arquivos ficam fora do Git e do pacote (`.gitignore` e `.forceignore`), porque a fonte é o `.agent`.
+> [!IMPORTANT]
+> `sf agent publish` generates org-specific metadata under `aiAgents/` and `aiAgentDefinitionVersions/`. Both directories are intentionally excluded via `.gitignore` and `.forceignore`; the canonical source of truth is `aiAuthoringBundles/Gina/Gina.agent`.
 
-Para testar sem abrir a org: `sf agent preview start -o gina-dev --authoring-bundle Gina --use-live-actions`. O CLI 2.153.5 falha no preview de agente interno sem `default_agent_user` ("reading 'replace'"); para o preview, ponha o seu usuário nessa linha temporariamente e tire antes de publicar.
+---
 
-## Pacote
+## 2GP Managed Package (`Gina Intell`)
 
-A pasta `salesforce/force-app` é o pacote desbloqueado **Gina** (Dev Hub na org `gina-dev`): regras em Apex, as 3 ações, os 2 campos de Contact e o `Gina_Demo`. A versão 0.1.0-1 (`04tgK000000RlIzQAK`) passou nos 12 testes com 99% de cobertura e foi instalada numa org temporária limpa, onde a ação classificou uma cliente nova igual à org de desenvolvimento.
+- **Namespace:** `ginaintell` (configured in [`salesforce/sfdx-project.json`](../salesforce/sfdx-project.json)).
+- **Coverage:** **99% Apex code coverage** across `GinaRulesTest`, `GinaActionsTest`, and `GinaJourneyTest`.
+- **Dynamic Namespace Field Resolution:** Uses `GinaRules.CONSENT_FIELD` and `GinaRules.IGNORED_FIELD` (`getDescribe().getName()`) so all SOQL and field map lookups remain namespace-safe.
 
-O agente fica fora do pacote, em `salesforce/agent/`: o Agent Script (`AiAuthoringBundle`) não pode ser empacotado. No relatório de cobertura de metadados da v68.0 ele só tem Metadata API e Source Tracking. Quem instala publica o agente com `sf agent publish` e atribui o `Gina_Agente`. Para ir dentro do pacote, o agente teria de ser refeito no formato clássico (`GenAiPlannerBundle`, `GenAiPlugin`, `GenAiFunction`), que é empacotável inclusive como gerenciado.
-
-Os testes das ações rodam como um dono com `Gina_Demo`. Sem ele, os campos de consentimento não são legíveis, o consentimento conta como ausente e a Gina não sugere contato; `withoutReadAccessToConsentTheGinaNeverSuggestsContact` prova isso.
-
-Nova versão:
-
-```bash
-cd salesforce
-sf package version create -v gina-dev --package Gina --installation-key-bypass --code-coverage --wait 30
-```
-
-O `sf package create` reescreve o `sfdx-project.json` (tira `default` e `definitionFile`); confira o arquivo depois dele.
-
-Este pacote desbloqueado não tem namespace e por isso não pode ser anunciado no AppExchange. Ele fica como histórico.
-
-### Pacote gerenciado: Gina Intell (14/10/2026)
-
-- **Namespace** `ginaintell`, registrado numa Developer Edition separada (não a do Dev Hub) e **vinculado ao Dev Hub `gina-dev`** em Namespace Registries. Não apague a org do namespace.
-- **Pacote** `Gina Intell` (`0HogK0000004xZNSAY`), tipo gerenciado 2GP, criado com a chave `"namespace": "ginaintell"` no `sfdx-project.json`.
-- **Versão 0.1.0.1** (`04tgK000000RrHxQAK`): 99% de cobertura, meta atingida, **ainda não promovida** (`Released: false`). Link de instalação: `https://login.salesforce.com/packaging/installPackage.apexp?p0=04tgK000000RrHxQAK`.
-- **Atenção ao nome dos campos:** com namespace, os campos ganham o prefixo `ginaintell__`. O código usa `GinaRules.CONSENT_FIELD` e `IGNORED_FIELD` por isso (ver [o-que-deu-errado.md](o-que-deu-errado.md), item 1).
-
-Nova versão do pacote gerenciado:
+To create a new package version on a linked Dev Hub:
 
 ```bash
 cd salesforce
 sf package version create --package "Gina Intell" --installation-key-bypass --code-coverage --wait 30 --target-dev-hub gina-dev
 ```
 
-Falta, para anunciar no AppExchange: entrar no Partner Program e passar pela revisão de segurança da Salesforce. A estratégia atual é vender como serviço (consultoria, design e o agente), então esses dois passos ficam para quando houver comprador em vista.
-
-Índice de toda a documentação: [README.md](README.md).
+Full documentation index: [`docs/README.md`](README.md).

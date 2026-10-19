@@ -1,10 +1,10 @@
-# Scripts de instalação (preinstall/postinstall) ficam bloqueados por padrão no pnpm 11.
-# Só libere pacote estritamente necessário e confiável; o resto fica negado de propósito.
-# Obs.: o pnpm 11 não lê mais o campo "pnpm" do package.json (onlyBuiltDependencies vira allowBuilds aqui).
+# Lifecycle installation scripts (preinstall/postinstall) are blocked by default in pnpm 11.
+# Explicitly allow only audited, strictly required native build packages; deny all others by default.
+# Note: pnpm 11 ignores the legacy "pnpm.onlyBuiltDependencies" field in package.json in favor of allowBuilds here.
 allowBuilds:
-  # postinstall confere o binário nativo da plataforma (e baixa, se faltar). Necessário.
+  # postinstall verifies the platform-native binary (and downloads it if missing). Required by Vite/tsx.
   esbuild: true
-  # preinstall é um no-op ("echo 'preinstall: no-op'"). Não precisa rodar.
+  # preinstall is a no-op ("echo 'preinstall: no-op'"). Explicitly denied.
   '@google/genai': false
-  # postinstall só imprime aviso de versão. Não precisa rodar.
+  # postinstall only prints a version notice. Explicitly denied.
   protobufjs: false

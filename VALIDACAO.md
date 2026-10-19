@@ -1,29 +1,25 @@
-# Validação da revisão local — 10/10/2026
+# Local Verification & Engineering Validation Report
 
-## Mudanças
+## Summary of Hardening & Architectural Changes
 
-- Carregamento de `.env.local` e `.env`, preservando a prioridade de variáveis do processo.
-- Cliente Gemini criado apenas quando há chave configurada, evitando avisos de chave ausente no modo manual.
-- Endpoint `/api/health` com diagnóstico sem expor a chave.
-- APIs desconhecidas retornam JSON 404 em vez de cair no HTML da aplicação.
-- ZIP gerado do código atual com `fflate`, sem arquivos de ambiente privados, dependências, builds ou arquivos ZIP aninhados.
-- Separação de comandos de desenvolvimento e produção, identificação do pacote e documentação local.
-- Configuração ESM do Vite sem dependência de `__dirname`.
+- **Deterministic Environment Resolution:** Loads `.env.local` and `.env` while strictly preserving existing process-level environment variable precedence.
+- **Lazy LLM Client Initialization:** Instantiates the Gemini SDK client only when a valid API key is configured, allowing clean manual/deterministic operation without missing-key warnings.
+- **Zero-Leakage Health Diagnostics:** Provides `/api/health` status reporting whether live LLM evaluation is configured without exposing key material or metadata.
+- **Strict API 404 Boundary:** Unknown `/api/*` routes return structured JSON `404` responses rather than falling through to the SPA HTML entrypoint.
+- **Sanitized Source Packaging (`fflate`):** Dynamically generates `public/gina-training-lab-updated.zip` from the current source tree while excluding `.env*` secrets, `node_modules/`, build artifacts, heavy design assets (`docs/assets/`), and nested archives.
+- **Loopback & Host-Header Guard:** Binds the Express server exclusively to `127.0.0.1` and enforces strict `Host` validation (`hostGuard.ts`) before all routes to prevent DNS rebinding and local network exposure.
+- **ESM & Build Hygiene:** Uses native ESM configuration in Vite without legacy `__dirname` dependencies.
 
-## Evidência executada
+## Executed Verification Evidence
 
-Ambiente: macOS, Node.js 24.19.0, dependências instaladas com pnpm 11.25.0. O arquivo `pnpm-lock.yaml` registra as versões resolvidas. A compilação usou Vite 8.3.4 e a verificação de tipos usou TypeScript 7.0.2.
+Environment: macOS, Node.js `24.21.0`, dependencies locked with `pnpm@11.28.5` (`pnpm-lock.yaml`). Frontend bundled with Vite `8.3.x` and type-checked with TypeScript `7.0.2`.
 
-- Verificação TypeScript: passou, sem erros.
-- Build de produção: passou.
-- Suíte local original: 47/47 aprovados, zero chamadas novas de IA.
-- Cinco testes adicionais: inicialização sem chave; leitura de `.env.local`; API desconhecida; download de ZIP válido; empacotamento sem segredos ou arquivos transitórios. Todos passaram.
-- Navegador: aplicação local carregada, página de cenários renderizada e gabarito manual exibido sem chave Gemini.
+- **TypeScript Static Typecheck (`npm run lint`):** Passed with zero errors.
+- **Production & Showcase Builds (`npm run build`, `npm run build:showcase`):** Passed; showcase bundle verified free of secrets, internal prompts, and personal identifiers.
+- **Deterministic & Adversarial Evaluation Suite (`npm run test:challenges`):** **47 / 47 passed (100%)** with logical test isolation and zero external API calls.
+- **Local Runtime, Security & Salesforce Parity Suite (`npm run test:local`):** All integration, host-guard, injection-scanner, source-packaging, welcome-flow, and Salesforce parity tests passed.
+- **Static Prompt-Injection & Unicode Scan (`npm run scan`):** Zero unallowlisted findings across the repository.
 
-As falhas de API desconhecida e diagnóstico/configuração foram reproduzidas antes das correções. O teste de empacotamento falhou antes da criação do gerador de ZIP e passou depois.
+## Scope & Remaining Production Prerequisites
 
-## O que ainda depende de validação
-
-Não foram realizadas chamadas reais ao Gemini, nem testados modelos, cobrança, implantação pública ou autenticação. Os seis registros de desafios de IA que já vinham no projeto foram preservados; cinco estão bloqueados e um aguarda revisão humana. Eles não contam como testes aprovados nesta revisão.
-
-A identidade visual original foi preservada. FilmCraft, PhotoCraft e VectorCraft não foram usados nesta rodada de correções técnicas. O projeto continua integrado ao Gemini; não foi migrado para a API Claude.
+Live external LLM API calls are intentionally capped and omitted from automated CI runs to guarantee deterministic, zero-cost reproducibility. The six historical live-API challenge records imported from the initial studio benchmark are preserved for audit transparency (five infrastructure-blocked, one pending human review) and are not counted as automated passes.

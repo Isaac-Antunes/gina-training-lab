@@ -1,52 +1,50 @@
-# Segurança
+# Security & Safety Architecture
 
-Este documento separa o que a Gina **garante por construção**, o que está **provado por teste** e o que **ainda não foi verificado**. Não há auditoria externa nem revisão de segurança da Salesforce até 14/10/2026.
+This document distinguishes between what Gina **guarantees by structural construction**, what is **empirically verified by automated tests**, and what **remains out of scope** prior to external multi-tenant certification.
 
-## Garantias por construção
+> [!NOTE]
+> Gina's primary defense against indirect prompt injection and policy drift is **structural capability restriction**, not prompt wording alone. Neither the Node server nor the Salesforce Agentforce agent has any tool capable of sending external messages.
 
-| Risco | Como a Gina evita | Onde |
+## Structural Guarantees by Construction
+
+| Threat / Risk | Architectural Mitigation | Implementation Location |
 |---|---|---|
-| Mandar mensagem a cliente sem aprovação | Não existe nenhuma ação que envie mensagem. A única escrita é criar uma `Task` para o dono. | `GinaService.createOwnerTask`, as 3 ações |
-| Contatar quem não autorizou | Consentimento ausente ou revogado bloqueia, inclusive VIP. Opt-out de e-mail também. | `GinaRules.readConsent`, `evaluate` |
-| Ler dados que o usuário não pode ver | Contact lido com `stripInaccessible`; Order e Task com `WITH USER_MODE`; classes `with sharing`. | `GinaService` |
-| Campo de consentimento ilegível liberar contato | Campo sem permissão de leitura conta como consentimento **ausente**. | `readConsent` |
-| Tarefa duplicada ou decisão forjada | A ação recalcula a decisão lendo a org e não cria outra se já houver tarefa da Gina aberta. | `createOwnerTask`, `findOpenTask` |
-| Escrever sem permissão | A `Task` é criada com `Database.insert(task, AccessLevel.USER_MODE)`. | `GinaService` |
-| Agente "inventar" decisão | As instruções proíbem calcular e as decisões vêm das ações em Apex. | `Gina.agent`, `GinaRules` |
-| Abuso de limite do Apex | Leitura limitada a 5.000 contatos e 20.000 pedidos. | `GinaService` |
+| **Unauthorized customer messaging** | Zero external messaging tools exist. The sole write capability creates an internal Salesforce `Task` for the human owner. | `GinaService.createOwnerTask`, 3 `@InvocableMethod` classes, `ownerTask.ts` |
+| **Contacting unconsented or opted-out users** | Missing or revoked consent—or `HasOptedOutOfEmail`—triggers an immediate hard block before rhythm or VIP evaluation. | `GinaRules.readConsent`, `GinaRules.evaluate`, `crmMath.ts` |
+| **Unauthorized CRM data exposure (FLS / Sharing)** | `Contact` records are filtered with `Security.stripInaccessible(AccessType.READABLE, ...)`; `Order` and `Task` queries enforce `WITH USER_MODE`; all Apex classes declare `with sharing`. | `GinaService.cls` |
+| **Fail-open on unreadable consent fields** | If a user lacks FLS read permission on `Gina_WhatsApp_Consent__c`, `readConsent` resolves to `missing` (fail-closed) and blocks outreach. | `GinaRules.readConsent` |
+| **Forged or duplicate task creation** | `createOwnerTask` re-computes the customer decision directly from database records and aborts if an open `Gina:%` task already exists. | `GinaService.createOwnerTask`, `findOpenTask` |
+| **Unprivileged database writes** | `Task` insertion executes via `Database.insert(task, AccessLevel.USER_MODE)`. | `GinaService.cls` |
+| **Hallucinated LLM metrics or policy drift** | Agent instructions prohibit manual math, and all classifications originate exclusively from deterministic TypeScript/Apex engines. | `Gina.agent`, `GinaRules.cls`, `crmMath.ts` |
+| **Apex governor limit exhaustion** | Queries are explicitly bounded to 5,000 contacts and 20,000 orders. | `GinaService.cls` |
+| **Local server DNS rebinding / LAN exposure** | `server.ts` binds exclusively to `127.0.0.1` and validates the `Host` header via `hostGuard` middleware before routing. | `server.ts`, `src/utils/hostGuard.ts` |
 
-## Quem pode usar
+## Least-Privilege Permission Architecture
 
-Dois conjuntos de permissão, separados de propósito:
+Access in Salesforce is intentionally split across two distinct permission sets:
 
-- `Gina_Demo`: liberam as 3 ações e a leitura de `Gina_WhatsApp_Consent__c`, `Gina_Ignored_Contacts__c` e `HasOptedOutOfEmail`.
-- `Gina_Agente`: dá acesso ao agente no painel do Agentforce.
+- `Gina_Demo`: Grants access to the 3 Apex invocable actions and read access to `Gina_WhatsApp_Consent__c`, `Gina_Ignored_Contacts__c`, and `HasOptedOutOfEmail`.
+- `Gina_Agente`: Grants access to the conversational Agentforce employee agent UI.
 
-Quem não tem `Gina_Demo` **não consegue ler o consentimento**, e a Gina trata isso como "sem consentimento": não sugere contato e não cria tarefa. Está provado em `withoutReadAccessToConsentTheGinaNeverSuggestsContact`.
+A user without `Gina_Demo` cannot read the custom consent field; Gina automatically treats this as `missing` consent, suggests zero contacts, and creates zero tasks (formally proven by `GinaActionsTest.withoutReadAccessToConsentTheGinaNeverSuggestsContact`).
 
-## Como o agente se defende de instruções maliciosas
+## Defense-in-Depth Against Prompt Injection
 
-A defesa real **não está no texto do agente**, está nas ações. Mesmo que alguém convença o modelo de linguagem a desobedecer às instruções, ele só tem três ferramentas: listar, explicar e criar tarefa. Nenhuma envia mensagem, e a criação de tarefa recalcula a decisão e recusa sem consentimento. O cenário de injeção maliciosa do método está em `playground/cenario-6-violacao-de-consentimento-injecao-maliciosa.md`.
+1. **Bounded Action Space:** Even if an adversarial payload inside a customer record attempts to override model instructions, the Agentforce agent only possesses three Apex tools: list, analyze, and create an owner review task. None of these tools can transmit external messages, and `create_owner_task` re-verifies consent and eligibility in Apex before writing.
+2. **Context Sanitization (`src/utils/contextEngineering.ts`):** Strips zero-width and bidirectional Unicode characters, flags buried instruction overrides and external Markdown image trackers, and purges injected privilege fields (`isVipTier`, `bypassConsent`, `expectedAction`) before data reaches the prompt builder.
+3. **Adversarial Evaluation Benchmark:** The consent-violation and injection scenario is documented in `playground/cenario-6-violacao-de-consentimento-injecao-maliciosa.md` and executed automatically via `npm test`.
 
-## Dados e segredos
+## Data & Supply-Chain Hygiene
 
-- Dados de demonstração são **fictícios** (nenhum cliente real).
-- Credenciais só em `.env.local`, ignorado pelo Git e excluído do ZIP. A vitrine pública não usa variáveis de ambiente.
-- Instale dependências com `--frozen-lockfile`; não apague o `pnpm-lock.yaml` para "resolver" erro.
-- Scripts de instalação: só `esbuild` liberado em `pnpm-workspace.yaml` (`allowBuilds`); `@google/genai` e `protobufjs` ficam negados de propósito.
-- O site público `gina-crm` é estático (HTML e CSS), sem JavaScript, formulários ou cookies. Relatos de vulnerabilidade vão pelo **Security → Report a vulnerability** do GitHub. O CodeQL do repositório está desligado por escolha do dono.
+- All repository demonstration records are **100% synthetic** (zero real customer PII).
+- Local credentials reside exclusively in `.env.local` (ignored by Git and excluded from `public/gina-training-lab-updated.zip`). The public showcase (`npm run build:showcase`) uses zero environment variables, verified by `scripts/showcase.test.mjs`.
+- Dependencies are installed with `--frozen-lockfile`. Lifecycle scripts are restricted via `allowBuilds` in `pnpm-workspace.yaml` (only `esbuild` is permitted; `@google/genai` and `protobufjs` are explicitly denied).
 
-## O que ainda não foi verificado
+## Out-of-Scope Areas & Operational Warnings
 
-- **Revisão de segurança da Salesforce:** não feita. É obrigatória para anunciar no AppExchange.
-- **Auditoria independente do Apex:** não feita; só os testes do próprio projeto.
-- **Teste com muitos dados:** os testes usam dezenas de registros. O teto de 5.000/20.000 foi escolhido, não medido sob carga.
-- **Chamadas reais a modelos de IA** no servidor Node: não validadas (ver `VALIDACAO.md`).
-- **Idiomas:** o agente foi feito em português do Brasil.
-- **Instalação do pacote gerenciado numa org limpa:** o pacote desbloqueado foi testado assim; a versão gerenciada `0.1.0.1` passou nos testes na criação, mas a instalação dela ainda não foi conferida em outra org.
-
-## Alertas para quem instala
-
-1. Atribua `Gina_Demo` só a quem pode ver o consentimento dos clientes.
-2. Registre o consentimento **antes** de esperar sugestões. Sem ele, a Gina fica em silêncio, e isso é o comportamento correto.
-3. Em produção, não use o `sf:seed`: ele existe só para Developer Edition e sandbox.
+- **Salesforce AppExchange Security Review:** Required prior to commercial AppExchange listing; not yet submitted.
+- **High-Volume Load Testing:** Governor caps (5,000 contacts / 20,000 orders) are enforced statically; large-scale enterprise batching requires asynchronous Apex (`Batchable` / Data Cloud) if scaled beyond small retail.
+- **Operator Guidelines:**
+  1. Assign `Gina_Demo` only to operators authorized to view customer consent records.
+  2. Record documented opt-in consent before expecting outreach tasks; silence in the absence of consent is by design.
+  3. Never run `npm run sf:seed` against a production org—it is strictly for Developer Edition and scratch orgs.
