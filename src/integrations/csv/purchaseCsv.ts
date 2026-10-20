@@ -15,48 +15,26 @@
  * ISO (YYYY-MM-DD) or Brazilian DD/MM/YYYY. Amounts accept dot or comma decimals.
  */
 
-import { buildGinaCustomers, type GinaSalesforceCustomer } from '../salesforce/toGina';
-import { buildOwnerTask, type OwnerTask } from '../salesforce/ownerTask';
+import { buildGinaCustomers } from '../salesforce/toGina';
 import type { SalesforceContact, SalesforceOrder } from '../salesforce/types';
+import { normalizeTextKey as normalizeHeader, parseAmount, parseFlexibleDate } from '../shared/parsing';
+import {
+  buildReviewQueue,
+  renderQueueCsv,
+  renderQueueMarkdown,
+  type QueueIssue,
+  type QueueWarning,
+  type ReviewQueue,
+} from '../queue/reviewQueue';
+
+export type { QueueItem, QueueWarning, ReviewQueue } from '../queue/reviewQueue';
+export { buildReviewQueue, renderQueueCsv, renderQueueMarkdown } from '../queue/reviewQueue';
+
+export { normalizeHeader, parseAmount, parseFlexibleDate };
 
 export type CsvConsent = 'granted' | 'missing' | 'revoked';
-
-export interface CsvWarning {
-  line: number | null;
-  message: string;
-}
-
-export interface CsvError {
-  line: number | null;
-  message: string;
-}
-
-export interface QueueItem {
-  customerId: string;
-  name: string;
-  consent: CsvConsent;
-  classification: string;
-  recommendedAction: string;
-  medianIntervalDays: number | null;
-  recencyDays: number;
-  ratio: number | null;
-  isVip: boolean;
-  priority: 'High' | 'Normal' | null;
-  task: OwnerTask | null;
-  reason: string;
-  orderCount: number;
-  totalSpending: number;
-}
-
-export interface ReviewQueue {
-  referenceDate: string;
-  customerCount: number;
-  actionable: QueueItem[];
-  blocked: QueueItem[];
-  silent: QueueItem[];
-  dataIssues: QueueItem[];
-  warnings: CsvWarning[];
-}
+export type CsvWarning = QueueWarning;
+export type CsvError = QueueIssue;
 
 export interface ImportResult {
   queue: ReviewQueue;
@@ -127,16 +105,6 @@ const MISSING_VALUES = new Set([
   'missing', 'ausente', 'desconhecido', 'desconhecida', 'unknown', 'pendente', 'sem_registro', '',
 ]);
 const REQUIRED_FIELDS = ['customerId', 'purchaseDate'] as const;
-
-/** Removes accents, lowercases and normalizes separators for header matching. */
-export function normalizeHeader(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[\s-]+/g, '_');
-}
 
 function stripBom(text: string): string {
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
@@ -253,49 +221,6 @@ function cellAt(row: CsvRow, index: Record<string, number>, field: string): stri
   const position = index[field];
   if (position === undefined) return '';
   return row.cells[position] ?? '';
-}
-
-/** Parses ISO or Brazilian dates into YYYY-MM-DD, validating real calendar days. */
-export function parseFlexibleDate(value: string): string | null {
-  const raw = value.trim();
-  if (!raw) return null;
-  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
-  if (iso) {
-    const [, year, month, day] = iso;
-    return isValidCalendarDate(Number(year), Number(month), Number(day))
-      ? `${year}-${month}-${day}`
-      : null;
-  }
-  const br = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  if (br) {
-    const [, day, month, year] = br;
-    return isValidCalendarDate(Number(year), Number(month), Number(day))
-      ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-      : null;
-  }
-  return null;
-}
-
-function isValidCalendarDate(year: number, month: number, day: number): boolean {
-  if (year < 1900 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) return false;
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
-}
-
-/** Parses dot-decimal or Brazilian comma-decimal amounts. Blank means 0. */
-export function parseAmount(value: string): number | null {
-  const cleaned = value.trim().replace(/R\$/gi, '').replace(/\s/g, '');
-  if (!cleaned) return 0;
-  let normalized = cleaned;
-  if (cleaned.includes(',') && cleaned.includes('.')) {
-    normalized = cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')
-      ? cleaned.replace(/\./g, '').replace(',', '.')
-      : cleaned.replace(/,/g, '');
-  } else if (cleaned.includes(',')) {
-    normalized = cleaned.replace(',', '.');
-  }
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function normalizeConsent(value: string): { consent: CsvConsent; known: boolean } {
@@ -436,40 +361,6 @@ function toSalesforceShape(customers: CustomerAggregate[]): {
   return { contacts, orders };
 }
 
-function toQueueItem(customer: GinaSalesforceCustomer, today: Date): QueueItem {
-  const task = buildOwnerTask(customer, today);
-  return {
-    customerId: customer.contactId,
-    name: customer.name,
-    consent: customer.consent,
-    classification: customer.facts.classification,
-    recommendedAction: customer.facts.recommendedAction,
-    medianIntervalDays: customer.facts.medianIntervalDays,
-    recencyDays: customer.facts.recencyDays,
-    ratio: customer.facts.ratio,
-    isVip: customer.isVip,
-    priority: task?.Priority ?? null,
-    task,
-    reason: customer.facts.explanation,
-    orderCount: customer.orderCount,
-    totalSpending: customer.totalSpending,
-  };
-}
-
-function sortActionable(items: QueueItem[]): QueueItem[] {
-  return [...items].sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority === 'High' ? -1 : 1;
-    if ((b.ratio ?? -1) !== (a.ratio ?? -1)) return (b.ratio ?? -1) - (a.ratio ?? -1);
-    return b.recencyDays - a.recencyDays;
-  });
-}
-
-function referenceDateOf(today: Date): string {
-  return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
-    .toISOString()
-    .slice(0, 10);
-}
-
 /**
  * Imports a purchase CSV and produces a deterministic review queue.
  * Valid rows are always evaluated; `errors` lists rows that could not be read.
@@ -484,152 +375,9 @@ export function importPurchaseCsv(text: string, options: ImportOptions = {}): Im
   const { contacts, orders } = toSalesforceShape(customers);
   const built = buildGinaCustomers(contacts, orders, today);
 
-  const actionable: QueueItem[] = [];
-  const blocked: QueueItem[] = [];
-  const silent: QueueItem[] = [];
-  const dataIssues: QueueItem[] = [];
-
-  for (const customer of built) {
-    const item = toQueueItem(customer, today);
-    if (item.consent !== 'granted') {
-      blocked.push(item);
-    } else if (item.classification === 'invalid_input' || item.classification === 'incomplete_data') {
-      dataIssues.push(item);
-    } else if (item.task) {
-      actionable.push(item);
-    } else {
-      silent.push(item);
-    }
-  }
-
   return {
-    queue: {
-      referenceDate: referenceDateOf(today),
-      customerCount: built.length,
-      actionable: sortActionable(actionable),
-      blocked,
-      silent,
-      dataIssues,
-      warnings,
-    },
+    queue: buildReviewQueue(built, today, warnings),
     errors,
     skippedRows: parsed.rows.length - rows.length,
   };
-}
-
-function escapeMarkdownCell(value: string | number | null): string {
-  if (value === null) return '—';
-  return String(value).replace(/\|/g, '\\|').replace(/\n/g, ' ');
-}
-
-export function renderQueueMarkdown(result: ImportResult): string {
-  const { queue } = result;
-  const lines: string[] = [];
-  lines.push(`# Gina review queue — ${queue.referenceDate}`);
-  lines.push('');
-  lines.push(
-    `${queue.customerCount} cliente(s) avaliados · ${queue.actionable.length} pedem ação · ${queue.blocked.length} bloqueados · ${queue.silent.length} sem ação · ${queue.dataIssues.length} com problema de dados`,
-  );
-  lines.push('');
-
-  lines.push('## Precisa de ação do dono');
-  if (queue.actionable.length === 0) {
-    lines.push('');
-    lines.push('Nenhum cliente pede ação hoje.');
-  } else {
-    lines.push('');
-    lines.push('| Prioridade | Cliente | Classificação | Ritmo (dias) | Recência (dias) | Razão | Consentimento | Ação |');
-    lines.push('|---|---|---|---|---|---|---|---|');
-    for (const item of queue.actionable) {
-      lines.push(
-        `| ${item.priority ?? '—'} | ${escapeMarkdownCell(item.name)} (${escapeMarkdownCell(item.customerId)}) | ${item.classification} | ${escapeMarkdownCell(item.medianIntervalDays)} | ${item.recencyDays} | ${item.ratio === null ? '—' : item.ratio.toFixed(2)} | ${item.consent} | ${item.recommendedAction} |`,
-      );
-    }
-    lines.push('');
-    lines.push('### Por que agora');
-    for (const item of queue.actionable) {
-      const task = item.task ? ` Tarefa sugerida: "${item.task.Subject}".` : '';
-      lines.push(`- **${item.name}** — ${item.reason}${task}`);
-    }
-  }
-
-  lines.push('');
-  lines.push('## Bloqueados por consentimento');
-  if (queue.blocked.length === 0) {
-    lines.push('');
-    lines.push('Nenhum cliente bloqueado.');
-  } else {
-    for (const item of queue.blocked) {
-      lines.push(`- **${item.name}** (${item.consent}) — ${item.reason}`);
-    }
-  }
-
-  if (queue.dataIssues.length > 0) {
-    lines.push('');
-    lines.push('## Problemas de dados');
-    for (const item of queue.dataIssues) {
-      lines.push(`- **${item.name}** — ${item.reason}`);
-    }
-  }
-
-  lines.push('');
-  lines.push('## Sem ação hoje');
-  if (queue.silent.length === 0) {
-    lines.push('');
-    lines.push('—');
-  } else {
-    for (const item of queue.silent) {
-      lines.push(`- **${item.name}** — ${item.classification} (${item.recommendedAction})`);
-    }
-  }
-
-  if (queue.warnings.length > 0) {
-    lines.push('');
-    lines.push('## Avisos de importação');
-    for (const warning of queue.warnings) {
-      lines.push(`- ${warning.line === null ? 'arquivo' : `linha ${warning.line}`}: ${warning.message}`);
-    }
-  }
-
-  if (result.errors.length > 0) {
-    lines.push('');
-    lines.push('## Linhas não importadas');
-    for (const error of result.errors) {
-      lines.push(`- ${error.line === null ? 'arquivo' : `linha ${error.line}`}: ${error.message}`);
-    }
-  }
-
-  lines.push('');
-  lines.push('> A Gina não envia mensagens. Esta fila é para o dono revisar e decidir; qualquer contato é humano.');
-  lines.push('');
-  return lines.join('\n');
-}
-
-function csvCell(value: string | number | null): string {
-  const text = value === null ? '' : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-export function renderQueueCsv(result: ImportResult): string {
-  const header = [
-    'priority', 'customer_id', 'name', 'classification', 'recommended_action', 'consent',
-    'median_interval_days', 'recency_days', 'ratio', 'owner_task_subject', 'reason',
-  ];
-  const lines = [header.join(',')];
-  for (const item of result.queue.actionable) {
-    lines.push([
-      item.priority ?? '',
-      item.customerId,
-      item.name,
-      item.classification,
-      item.recommendedAction,
-      item.consent,
-      item.medianIntervalDays ?? '',
-      item.recencyDays,
-      item.ratio === null ? '' : item.ratio.toFixed(2),
-      item.task?.Subject ?? '',
-      item.reason,
-    ].map(csvCell).join(','));
-  }
-  return `${lines.join('\n')}\n`;
 }

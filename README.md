@@ -62,6 +62,7 @@ Every verification command runs locally with **logical test isolation** and **ze
 |---|---|
 | `npm test` | Runs the 47 deterministic & security challenges ([`scripts/run-challenges.ts`](scripts/run-challenges.ts)) plus all Node integration, parity, and hardening suites (`scripts/*.test.mjs`). |
 | `npm run crm:queue -- <compras.csv> --today YYYY-MM-DD` | Spreadsheet/CSV import mode: validates a purchase export, applies the same deterministic engine and prints an owner-reviewed queue (no network, no LLM, no customer message). See [`docs/csv-import.md`](docs/csv-import.md). |
+| `npm run hubspot:queue -- <dataset.json> --today YYYY-MM-DD` | HubSpot adapter: maps contacts and closed-won deals to the same engine and prints the owner queue (offline fixture, or `--live` read-only with `HUBSPOT_ACCESS_TOKEN`). See [`docs/hubspot-adapter.md`](docs/hubspot-adapter.md). |
 | `npm run agent:report -- <results.json>` | Normalizes an official Agentforce Studio test run (`sf agent test results --result-format json`) into a deterministic pass/fail report and exits non-zero on any failing scorer. |
 | `npm run scan` | Runs the static prompt-injection and invisible Unicode scanner ([`scripts/scan-injection.mjs`](scripts/scan-injection.mjs)) across all repository text and SVG files. |
 | `npm run lint` | Runs strict TypeScript (`tsc --noEmit`) verification across client, server, and evaluation harnesses. |
@@ -135,19 +136,21 @@ Salesforce/Agentforce is the **reference implementation**, not the limit. Gina's
 | Stack | Read | Write | Mode |
 |---|---|---|---|
 | Salesforce (Sales/Service) + Agentforce | Native REST/Apex (`USER_MODE`) | Owner `Task` | **Reference** |
-| HubSpot, Pipedrive, RD Station, Zoho, Dynamics | CRM API | Task/note | **Adapter** |
+| **HubSpot** | Contacts + deals API (read-only) | Review queue | **Adapter — implemented** |
+| Pipedrive, RD Station, Zoho, Dynamics | CRM API | Task/note | **Adapter** |
 | Google Sheets / Excel / ERP export | CSV/XLSX import | Review queue | **Import** |
 | WhatsApp lists / no CRM | Intake + sheet | Manual queue | **Manual** |
 
 What never changes: deterministic rhythm/VIP/dormancy/margin math, fail-closed consent, no autonomous customer messaging, one human-approved task/queue item, and the same adversarial/parity tests. What changes: field mapping, read/write paths, auth, consent semantics and adapter tests.
 
-The simplest path is already runnable — a purchase spreadsheet in, a prioritized review queue out:
+The simplest path is already runnable — a purchase spreadsheet (or a HubSpot export) in, a prioritized review queue out:
 
 ```bash
 npm run crm:queue -- playground/csv-exemplo-compras.csv --today 2026-10-19
+npm run hubspot:queue -- playground/hubspot-exemplo.json --today 2026-10-19
 ```
 
-The queue uses the same engine and owner-task contract as Salesforce, shows blocked-by-consent customers separately, and ends with the invariant *Gina does not send messages*. See [`docs/crm-agnostic.md`](docs/crm-agnostic.md) for the full contract, boundaries and FAQ, [`docs/csv-import.md`](docs/csv-import.md) for the spreadsheet schema and flags, and [`docs/mentoria-crm-agnostico.pt-BR.md`](docs/mentoria-crm-agnostico.pt-BR.md) for the PT-BR client one-pager.
+The queue uses the same engine and owner-task contract as Salesforce, shows blocked-by-consent customers separately, and ends with the invariant *Gina does not send messages*. See [`docs/crm-agnostic.md`](docs/crm-agnostic.md) for the full contract, boundaries and FAQ, [`docs/csv-import.md`](docs/csv-import.md) for the spreadsheet schema and flags, [`docs/hubspot-adapter.md`](docs/hubspot-adapter.md) for the HubSpot mapping and read-only live mode, and [`docs/mentoria-crm-agnostico.pt-BR.md`](docs/mentoria-crm-agnostico.pt-BR.md) for the PT-BR client one-pager.
 
 ---
 
@@ -235,6 +238,7 @@ gina-training-lab/
 │   │   └── hostGuard.ts             # Loopback Host-header validator (DNS rebinding defense)
 │   ├── integrations/salesforce/     # Read-only REST client, SOQL ID guard & idempotent Task writer
 │   ├── integrations/csv/            # Spreadsheet import: canonical mapping + owner review queue
+│   ├── integrations/hubspot/        # Read-only HubSpot adapter (contacts + closed-won deals)
 │   ├── welcome/                     # Signup consent-proof analyzer & channel fallback engine
 │   ├── showcase/                    # Zero-env bilingual public showcase (deployed to Vercel)
 │   └── components/                  # React 19 laboratory views (Scenarios, Training, Challenges, CRM)

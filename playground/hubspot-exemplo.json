@@ -1,0 +1,94 @@
+{
+  "contacts": [
+    {
+      "id": "hs-roberto",
+      "properties": {
+        "firstname": "Roberto",
+        "lastname": "Alves",
+        "email": "roberto@example.com",
+        "gina_whatsapp_consent": "granted",
+        "hs_email_optout": "false",
+        "gina_ignored_contacts": "0"
+      }
+    },
+    {
+      "id": "hs-ana",
+      "properties": {
+        "firstname": "Ana",
+        "lastname": "Lima",
+        "email": "ana@example.com",
+        "gina_whatsapp_consent": "sim",
+        "hs_email_optout": "false",
+        "gina_ignored_contacts": "0"
+      }
+    },
+    {
+      "id": "hs-bruno",
+      "properties": {
+        "firstname": "Bruno",
+        "lastname": "Dias",
+        "email": "bruno@example.com",
+        "gina_whatsapp_consent": "granted",
+        "hs_email_optout": "false",
+        "gina_ignored_contacts": "0"
+      }
+    },
+    {
+      "id": "hs-carla",
+      "properties": {
+        "firstname": "Carla",
+        "lastname": "Souza",
+        "email": "carla@example.com",
+        "gina_whatsapp_consent": "granted",
+        "hs_email_optout": "false",
+        "gina_ignored_contacts": "0"
+      }
+    },
+    {
+      "id": "hs-carlos",
+      "properties": {
+        "firstname": "Carlos",
+        "lastname": "Nunes",
+        "email": "carlos@example.com",
+        "gina_whatsapp_consent": "revoked",
+        "hs_email_optout": "false",
+        "gina_ignored_contacts": "0"
+      }
+    },
+    {
+      "id": "hs-pedro",
+      "properties": {
+        "firstname": "Pedro",
+        "lastname": "Santos",
+        "email": "pedro@example.com",
+        "gina_whatsapp_consent": "",
+        "hs_email_optout": "false",
+        "gina_ignored_contacts": "0"
+      }
+    }
+  ],
+  "deals": [
+    { "id": "d-r1", "properties": { "amount": "120", "closedate": "2026-07-20", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-roberto" }] } } },
+    { "id": "d-r2", "properties": { "amount": "120", "closedate": "2026-08-03", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-roberto" }] } } },
+    { "id": "d-r3", "properties": { "amount": "120", "closedate": "2026-08-17", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-roberto" }] } } },
+    { "id": "d-r4", "properties": { "amount": "120", "closedate": "2026-08-31", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-roberto" }] } } },
+    { "id": "d-r5", "properties": { "amount": "120", "closedate": "2026-09-14", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-roberto" }] } } },
+
+    { "id": "d-a1", "properties": { "amount": "28.50", "closedate": "2026-08-24", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-ana" }] } } },
+    { "id": "d-a2", "properties": { "amount": "28.50", "closedate": "2026-09-03", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-ana" }] } } },
+    { "id": "d-a3", "properties": { "amount": "28.50", "closedate": "2026-09-13", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-ana" }] } } },
+    { "id": "d-a4", "properties": { "amount": "28.50", "closedate": "2026-09-23", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-ana" }] } } },
+    { "id": "d-a5", "properties": { "amount": "28.50", "closedate": "2026-10-03", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-ana" }] } } },
+
+    { "id": "d-b1", "properties": { "amount": "200", "closedate": "2026-09-01", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-bruno" }] } } },
+    { "id": "d-b2", "properties": { "amount": "200", "closedate": "2026-09-11", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-bruno" }] } } },
+
+    { "id": "d-c1", "properties": { "amount": "25", "closedate": "2026-09-20", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-carla" }] } } },
+    { "id": "d-c2", "properties": { "amount": "999", "closedate": "2026-10-01", "dealstage": "appointmentscheduled" }, "associations": { "contacts": { "results": [{ "id": "hs-carla" }] } } },
+
+    { "id": "d-carlos1", "properties": { "amount": "50", "closedate": "2026-09-10", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-carlos" }] } } },
+    { "id": "d-pedro1", "properties": { "amount": "20", "closedate": "2026-09-05", "dealstage": "closedwon" }, "associations": { "contacts": { "results": [{ "id": "hs-pedro" }] } } },
+
+    { "id": "d-orphan", "properties": { "amount": "77", "closedate": "2026-09-01", "dealstage": "closedwon" } }
+  ]
+}

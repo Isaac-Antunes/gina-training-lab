@@ -20,7 +20,8 @@ com a mentoria do Isaac na implantação.
 | Seu cenário | Como a Gina entra | O que você recebe |
 |---|---|---|
 | **Salesforce (Sales/Service + Agentforce)** | Implementação de referência deste repositório | Agente dentro do Salesforce, ações Apex e testes oficiais |
-| **HubSpot, Pipedrive, RD Station, Zoho, Dynamics** | Adaptador: mapeia contatos, negócios/atividades e consentimento | Mesmo motor de decisão, integrado ao seu CRM |
+| **HubSpot** | Adaptador implementado (leitura): contatos + deals ganhos | Mesmo motor de decisão, com `npm run hubspot:queue` |
+| **Pipedrive, RD Station, Zoho, Dynamics** | Adaptador: mapeia contatos, negócios/atividades e consentimento | Mesmo motor de decisão, integrado ao seu CRM |
 | **Planilha, Google Sheets, ERP com exportação** | Modo importação: CSV/XLSX semanal | Fila de revisão priorizada, sem dashboard extra |
 | **Lista de WhatsApp / sem CRM** | Modo manual assistido: formulário + planilha | Rotina semanal de revisão e tarefas com trilha de auditoria |
 
@@ -31,6 +32,12 @@ npm run crm:queue -- compras.csv --today 2026-10-19
 ```
 
 A saída separa quem pede ação (VIP primeiro), quem está bloqueado por consentimento e quem está em ritmo/descanso — sem enviar nada a ninguém.
+
+O adaptador HubSpot segue o mesmo desenho: lê contatos e deals ganhos (offline por fixture ou `--live` somente leitura) e devolve a mesma fila.
+
+```bash
+npm run hubspot:queue -- hubspot-exemplo.json --today 2026-10-19
+```
 
 ## O que a mentoria entrega
 

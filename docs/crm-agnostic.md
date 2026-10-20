@@ -42,7 +42,7 @@ guarantees.
 | Stack | Read path | Write path | Mode | Notes |
 |---|---|---|---|---|
 | **Salesforce (Sales/Service) + Agentforce** | Native REST / Apex (`USER_MODE`) | `Task` for the owner | **Reference** | Full implementation in this repo: Apex parity, Agentforce topics, official agent tests. |
-| **HubSpot** | Contacts, deals, engagements API | Task/note | **Adapter** | Map deal stage/close date or engagement events to purchase events; consent from subscription/legal basis. |
+| **HubSpot** | Contacts + deals API (read-only) | Review queue / owner task | **Adapter — implemented** | [hubspot-adapter.md](hubspot-adapter.md): closed-won deals as purchases, conservative consent, offline fixture and live read-only modes. |
 | **Pipedrive** | Persons, deals, activities API | Activity | **Adapter** | Activities work well as purchase/visit events; consent needs a custom field or marketing-status mapping. |
 | **RD Station CRM** | CRM API | Task | **Adapter** | Common in Brazilian SMBs; confirm export/API scope on the plan. |
 | **Zoho CRM** | REST API | Task | **Adapter** | Flexible modules; map custom consent fields explicitly. |

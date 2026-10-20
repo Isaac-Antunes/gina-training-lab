@@ -112,11 +112,14 @@ task subject, and the no-messaging invariant.
 
 ## 8. Adapter contract
 
-To add another CRM (HubSpot, Pipedrive, RD Station, Zoho, Dynamics), implement the
-same two steps:
+HubSpot is already implemented as the reference adapter
+([`src/integrations/hubspot/`](../src/integrations/hubspot/); see
+[hubspot-adapter.md](hubspot-adapter.md)). To add another CRM (Pipedrive, RD
+Station, Zoho, Dynamics), implement the same two steps:
 
 1. Map the CRM's contacts and purchase/activity events to `SalesforceContact[]`
    and `SalesforceOrder[]` (the canonical shapes used by `toGina.ts`).
-2. Call `buildGinaCustomers` and render the queue with the existing helpers.
+2. Call `buildGinaCustomers` and render the queue with the shared
+   `buildReviewQueue` / renderers in `src/integrations/queue/reviewQueue.ts`.
 
 The policy engine, VIP math, consent rules and task contract stay unchanged.
