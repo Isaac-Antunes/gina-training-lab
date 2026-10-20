@@ -22,6 +22,7 @@ The live bilingual showcase runs at [**gina-intell.vercel.app**](https://gina-in
 - The Three Pillars: [1 · Deterministic Policy Engine](#1-deterministic-policy-engine) · [2 · Inside Salesforce Agentforce](#2-inside-salesforce-agentforce) · [3 · Adversarial & Context-Engineering Defense](#3-adversarial--context-engineering-defense)
 - Deep Dive: [The 10-Stage Decision Pipeline](#the-10-stage-decision-pipeline) · [RFV Competition Ranking (Rule of Thirds)](#rfv-competition-ranking-rule-of-thirds) · [Conservative Consent & Least Privilege](#conservative-consent--least-privilege)
 - [Empirical Evaluation Suite](#empirical-evaluation-suite) · [Visual & Brand System](#visual--brand-system) · [Repository Structure](#repository-structure) · [Known Limits & Privacy](#known-limits--privacy)
+- CRM-agnostic: [method & compatibility](#crm-agnostic-by-design-with-mentorship) · [PT-BR mentorship one-pager](docs/mentoria-crm-agnostico.pt-BR.md)
 
 ---
 
@@ -123,6 +124,21 @@ Gina separates **policy calculation** from **language explanation** across two i
    - **Privilege-Field Purging:** Recursively strips injected privilege keys (`isVipTier`, `bypassConsent`, `expectedAction`, `systemOverride`) from untrusted JSON payloads and records `tamperingDetected: true`.
 2. **Consent Conflict Resolution:** When historical notes contain contradictory consent claims (e.g., an early opt-in followed by a later revocation or embedded override), `analyzeContextEngineering` marks `authoritativeConsent: 'conflicted'` and fails closed.
 3. **Capability Containment:** Even if a language model were persuaded to disregard its system prompt, the action layer has no external communication primitive—and the Apex task writer independently blocks task creation whenever `consent != 'granted'`.
+
+---
+
+## CRM-Agnostic by Design (with Mentorship)
+
+Salesforce/Agentforce is the **reference implementation**, not the limit. Gina's value is the decision layer — canonical customer state → deterministic policy → explanation → one human-approved task — and the same contract is designed to run on other CRMs, on spreadsheets and on a manual weekly routine. Implementations on simpler stacks are delivered with Isaac's mentorship: diagnostic, field/consent mapping, adapter or CSV pipeline, weekly operating ritual, team training and governance.
+
+| Stack | Read | Write | Mode |
+|---|---|---|---|
+| Salesforce (Sales/Service) + Agentforce | Native REST/Apex (`USER_MODE`) | Owner `Task` | **Reference** |
+| HubSpot, Pipedrive, RD Station, Zoho, Dynamics | CRM API | Task/note | **Adapter** |
+| Google Sheets / Excel / ERP export | CSV/XLSX import | Review queue | **Import** |
+| WhatsApp lists / no CRM | Intake + sheet | Manual queue | **Manual** |
+
+What never changes: deterministic rhythm/VIP/dormancy/margin math, fail-closed consent, no autonomous customer messaging, one human-approved task/queue item, and the same adversarial/parity tests. What changes: field mapping, read/write paths, auth, consent semantics and adapter tests. See [`docs/crm-agnostic.md`](docs/crm-agnostic.md) for the full contract, boundaries and FAQ, and [`docs/mentoria-crm-agnostico.pt-BR.md`](docs/mentoria-crm-agnostico.pt-BR.md) for the PT-BR client one-pager.
 
 ---
 

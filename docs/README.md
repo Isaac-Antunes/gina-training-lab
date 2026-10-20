@@ -1,6 +1,6 @@
-# Gina Technical Documentation & Salesforce Architecture
+# Gina Technical Documentation & CRM Architecture
 
-Each document in this directory addresses a specific architectural, safety, or operational dimension of **Gina Training Lab** and the **Gina Intell** Salesforce Agentforce governance layer.
+Each document in this directory addresses a specific architectural, safety, or operational dimension of **Gina Training Lab** and the **Gina Intell** CRM governance layer. Salesforce/Agentforce is the reference implementation; the decision layer is CRM-agnostic (see [crm-agnostic.md](crm-agnostic.md)).
 
 | Document | Core Question Answered | When to Read |
 |---|---|---|
@@ -9,6 +9,8 @@ Each document in this directory addresses a specific architectural, safety, or o
 | [testes.md](testes.md) | What is empirically proven, how do tests run, and how are journeys added? | Before modifying TypeScript or Apex logic. |
 | [o-que-deu-errado.md](o-que-deu-errado.md) | What engineering failure modes occurred during 2GP packaging and how are they prevented? | Before packaging, publishing, or provisioning a new org. |
 | [salesforce.md](salesforce.md) | How do you connect a Salesforce org, publish the Agentforce bundle, and build a 2GP package? | When setting up local org integration or cutting package versions. |
+| [crm-agnostic.md](crm-agnostic.md) | How does the same decision layer run on other CRMs, spreadsheets and manual routines — and where are the boundaries? | Before positioning, scoping or onboarding a non-Salesforce stack. |
+| [mentoria-crm-agnostico.pt-BR.md](mentoria-crm-agnostico.pt-BR.md) | Client-facing one-pager (PT-BR) for the CRM-agnostic offer with mentorship. | When presenting to prospects or mentoring a team on a simple stack. |
 | `docs/assets/` | Visual architecture diagrams, character construction, and brand studies. | Reference assets for design and documentation. |
 
 ## Repository Component Map
