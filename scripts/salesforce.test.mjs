@@ -5,7 +5,7 @@ import { buildOwnerTask } from '../src/integrations/salesforce/ownerTask.ts';
 import { DEMO_CONTACTS, DEMO_ORDERS, DEMO_TODAY } from '../src/integrations/salesforce/demoData.ts';
 import { buildGinaCustomers, readConsent } from '../src/integrations/salesforce/toGina.ts';
 
-const INSTANCE = 'https://gina-dev.develop.my.salesforce.com';
+const INSTANCE = 'https://example.my.salesforce.com';
 
 /** fetch falso: registra as chamadas e responde por ordem. Nenhuma rede. */
 function fakeFetch(pages) {
