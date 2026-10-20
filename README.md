@@ -22,6 +22,7 @@ The live bilingual showcase runs at [**gina-intell.vercel.app**](https://gina-in
 - The Three Pillars: [1 · Deterministic Policy Engine](#1-deterministic-policy-engine) · [2 · Inside Salesforce Agentforce](#2-inside-salesforce-agentforce) · [3 · Adversarial & Context-Engineering Defense](#3-adversarial--context-engineering-defense)
 - Deep Dive: [The 10-Stage Decision Pipeline](#the-10-stage-decision-pipeline) · [RFV Competition Ranking (Rule of Thirds)](#rfv-competition-ranking-rule-of-thirds) · [Conservative Consent & Least Privilege](#conservative-consent--least-privilege)
 - [Empirical Evaluation Suite](#empirical-evaluation-suite) · [Visual & Brand System](#visual--brand-system) · [Repository Structure](#repository-structure) · [Known Limits & Privacy](#known-limits--privacy)
+- CRM-agnostic: [method & compatibility](#crm-agnostic-by-design-with-mentorship) · [PT-BR mentorship one-pager](docs/mentoria-crm-agnostico.pt-BR.md)
 
 ---
 
@@ -60,6 +61,9 @@ Every verification command runs locally with **logical test isolation** and **ze
 | Command | What It Verifies |
 |---|---|
 | `npm test` | Runs the 47 deterministic & security challenges ([`scripts/run-challenges.ts`](scripts/run-challenges.ts)) plus all Node integration, parity, and hardening suites (`scripts/*.test.mjs`). |
+| `npm run crm:queue -- <compras.csv> --today YYYY-MM-DD` | Spreadsheet/CSV import mode: validates a purchase export, applies the same deterministic engine and prints an owner-reviewed queue (no network, no LLM, no customer message). See [`docs/csv-import.md`](docs/csv-import.md). |
+| `npm run hubspot:queue -- <dataset.json> --today YYYY-MM-DD` | HubSpot adapter: maps contacts and closed-won deals to the same engine and prints the owner queue (offline fixture, or `--live` read-only with `HUBSPOT_ACCESS_TOKEN`). See [`docs/hubspot-adapter.md`](docs/hubspot-adapter.md). |
+| `npm run agent:report -- <results.json>` | Normalizes an official Agentforce Studio test run (`sf agent test results --result-format json`) into a deterministic pass/fail report and exits non-zero on any failing scorer. |
 | `npm run scan` | Runs the static prompt-injection and invisible Unicode scanner ([`scripts/scan-injection.mjs`](scripts/scan-injection.mjs)) across all repository text and SVG files. |
 | `npm run lint` | Runs strict TypeScript (`tsc --noEmit`) verification across client, server, and evaluation harnesses. |
 | `npm run package:source` | Generates the sanitized source archive (`public/gina-training-lab-updated.zip`), stripping `.env*` files, `node_modules/`, build artifacts, and heavy design binaries. |
@@ -110,6 +114,7 @@ Gina separates **policy calculation** from **language explanation** across two i
    - `GinaCreateOwnerTaskAction` (`create_owner_task`): Re-evaluates the customer and inserts a single `Task` (`Status = 'Not Started'`) if eligible.
 2. **Caller-Scoped Permissions (`USER_MODE`):** `GinaService` reads `Contact` with `Security.stripInaccessible(AccessType.READABLE, ...)` and queries `Order` and `Task` `WITH USER_MODE`.
 3. **2GP Managed Package (`ginaintell`):** Packaged under the `ginaintell` namespace (`salesforce/sfdx-project.json`) with dynamic field resolution (`Contact.Gina_WhatsApp_Consent__c.getDescribe().getName()`) so field lookups work seamlessly with or without a namespace prefix.
+4. **Pre-Sales/SDR Topics:** The same agent also carries additive `salesforce_discovery`, `salesforce_solution`, and `salesforce_objection` topics (plus a shared knowledge base for the 2026 portfolio, editions, consumption models and talk tracks), guarded by a strict "never invent price/feature/case" policy and a human-handoff path. See [`docs/gina-presales-sdr.md`](docs/gina-presales-sdr.md).
 
 ### 3 Adversarial & Context-Engineering Defense
 
@@ -121,6 +126,31 @@ Gina separates **policy calculation** from **language explanation** across two i
    - **Privilege-Field Purging:** Recursively strips injected privilege keys (`isVipTier`, `bypassConsent`, `expectedAction`, `systemOverride`) from untrusted JSON payloads and records `tamperingDetected: true`.
 2. **Consent Conflict Resolution:** When historical notes contain contradictory consent claims (e.g., an early opt-in followed by a later revocation or embedded override), `analyzeContextEngineering` marks `authoritativeConsent: 'conflicted'` and fails closed.
 3. **Capability Containment:** Even if a language model were persuaded to disregard its system prompt, the action layer has no external communication primitive—and the Apex task writer independently blocks task creation whenever `consent != 'granted'`.
+
+---
+
+## CRM-Agnostic by Design (with Mentorship)
+
+Salesforce/Agentforce is the **reference implementation**, not the limit. Gina's value is the decision layer — canonical customer state → deterministic policy → explanation → one human-approved task — and the same contract is designed to run on other CRMs, on spreadsheets and on a manual weekly routine. Implementations on simpler stacks are delivered with Isaac's mentorship: diagnostic, field/consent mapping, adapter or CSV pipeline, weekly operating ritual, team training and governance.
+
+| Stack | Read | Write | Mode |
+|---|---|---|---|
+| Salesforce (Sales/Service) + Agentforce | Native REST/Apex (`USER_MODE`) | Owner `Task` | **Reference** |
+| **HubSpot** | Contacts + deals API (read-only) | Review queue | **Adapter — implemented** |
+| Pipedrive, RD Station, Zoho, Dynamics | CRM API | Task/note | **Adapter** |
+| Google Sheets / Excel / ERP export | CSV/XLSX import | Review queue | **Import** |
+| WhatsApp lists / no CRM | Intake + sheet | Manual queue | **Manual** |
+
+What never changes: deterministic rhythm/VIP/dormancy/margin math, fail-closed consent, no autonomous customer messaging, one human-approved task/queue item, and the same adversarial/parity tests. What changes: field mapping, read/write paths, auth, consent semantics and adapter tests.
+
+The simplest path is already runnable — a purchase spreadsheet (or a HubSpot export) in, a prioritized review queue out:
+
+```bash
+npm run crm:queue -- playground/csv-exemplo-compras.csv --today 2026-10-19
+npm run hubspot:queue -- playground/hubspot-exemplo.json --today 2026-10-19
+```
+
+The queue uses the same engine and owner-task contract as Salesforce, shows blocked-by-consent customers separately, and ends with the invariant *Gina does not send messages*. See [`docs/crm-agnostic.md`](docs/crm-agnostic.md) for the full contract, boundaries and FAQ, [`docs/csv-import.md`](docs/csv-import.md) for the spreadsheet schema and flags, [`docs/hubspot-adapter.md`](docs/hubspot-adapter.md) for the HubSpot mapping and read-only live mode, and [`docs/mentoria-crm-agnostico.pt-BR.md`](docs/mentoria-crm-agnostico.pt-BR.md) for the PT-BR client one-pager.
 
 ---
 
@@ -171,6 +201,7 @@ Running `npm test` executes the complete offline verification harness:
 | **Runtime & Loopback Hardening** | [`scripts/local-runtime.test.mjs`](scripts/local-runtime.test.mjs) · [`scripts/host-guard.test.mjs`](scripts/host-guard.test.mjs) | 12 | Loopback binding (`127.0.0.1`), DNS rebinding defense (`hostGuard`), `.env.local` isolation, and `/api/download-zip` sanitization. |
 | **Static Injection & Bundle Hygiene** | [`scripts/scan-injection.test.mjs`](scripts/scan-injection.test.mjs) · [`scripts/showcase.test.mjs`](scripts/showcase.test.mjs) | 6 | Zero unallowlisted command phrases or hidden Unicode in repo; zero secrets or internal prompts in `dist-showcase/`. |
 | **Salesforce Apex Suite** | `GinaRulesTest` · `GinaActionsTest` · `GinaJourneyTest` | 17 | **99% org coverage** across isolated rules, real DML under `Gina_Demo` permission sets, FLS denial fail-closed behavior, and multi-date customer journeys. |
+| **Agentforce Agent Suite** | [`salesforce/specs/GinaPresalesSDR-ngtTestSpec.yaml`](salesforce/specs/GinaPresalesSDR-ngtTestSpec.yaml) | 14 | Official Agentforce Studio (NGT) tests: subagent routing, Apex action match, rubric-scored discovery/solution/objection behavior, factuality/completeness, price and LGPD guardrails, off-topic handoff and prompt-injection defense. Run with `sf agent test run`; report with `npm run agent:report`. |
 
 ---
 
@@ -206,14 +237,17 @@ gina-training-lab/
 │   │   ├── challengeRunner.ts       # 47-case deterministic & adversarial evaluation harness
 │   │   └── hostGuard.ts             # Loopback Host-header validator (DNS rebinding defense)
 │   ├── integrations/salesforce/     # Read-only REST client, SOQL ID guard & idempotent Task writer
+│   ├── integrations/csv/            # Spreadsheet import: canonical mapping + owner review queue
+│   ├── integrations/hubspot/        # Read-only HubSpot adapter (contacts + closed-won deals)
 │   ├── welcome/                     # Signup consent-proof analyzer & channel fallback engine
 │   ├── showcase/                    # Zero-env bilingual public showcase (deployed to Vercel)
 │   └── components/                  # React 19 laboratory views (Scenarios, Training, Challenges, CRM)
 ├── salesforce/                      # Salesforce DX & 2GP Managed Package (namespace: ginaintell)
-│   ├── force-app/                   # GinaRules.cls, GinaService.cls, 3 Invocable Actions & Apex tests
-│   └── agent/                       # Agentforce employee agent bundle (Gina.agent) & permissions
-├── scripts/                         # Test suites (*.test.mjs), injection scanner & ZIP packager
-├── playground/                      # 6 canonical retail lifecycle & adversarial scenario specs
+│   ├── force-app/                   # GinaRules.cls, GinaService.cls, 3 Invocable Actions, Apex tests & AiTestingDefinition
+│   ├── agent/                       # Agentforce employee agent bundle (Gina.agent: CRM + pre-sales topics) & permissions
+│   └── specs/                       # Agentforce Studio (NGT) agent-test spec (GinaPresalesSDR)
+├── scripts/                         # Test suites (*.test.mjs), CSV queue CLI, injection scanner, agent-test report & ZIP packager
+├── playground/                      # 6 scenario specs + csv-exemplo-compras.csv sample
 └── docs/                            # Deep-dive technical documentation & visual case-study assets
 ```
 

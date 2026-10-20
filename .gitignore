@@ -2,12 +2,17 @@ node_modules/
 build/
 dist/
 dist-showcase/
+dist-gina-salesforce/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
 *.zip
+
+# Agent preview transcripts may contain internal instructions and session data
+temp/
+temp/agent-preview/
 
 # Local Claude Code configuration (machine-specific settings)
 .claude/*

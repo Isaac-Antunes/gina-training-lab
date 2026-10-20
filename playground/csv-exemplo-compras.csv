@@ -1,0 +1,30 @@
+cliente_id,nome,telefone,consentimento,data_compra,valor,contatos_ignorados,observacoes
+c-ana,Ana Lima,+5511999990001,sim,2026-08-24,28.50,0,
+c-ana,Ana Lima,+5511999990001,sim,2026-09-03,28.50,0,
+c-ana,Ana Lima,+5511999990001,sim,2026-09-13,28.50,0,
+c-ana,Ana Lima,+5511999990001,sim,2026-09-23,28.50,0,
+c-ana,Ana Lima,+5511999990001,sim,2026-10-03,28.50,0,"compra na loja"
+c-marcos,Marcos Silveira,+5511999990002,sim,2026-08-02,30.00,0,
+c-marcos,Marcos Silveira,+5511999990002,sim,2026-08-12,30.00,0,
+c-marcos,Marcos Silveira,+5511999990002,sim,2026-08-22,30.00,0,
+c-marcos,Marcos Silveira,+5511999990002,sim,2026-09-01,30.00,0,
+c-roberto,Roberto Alves,+5511999990003,sim,2026-07-20,120.00,0,
+c-roberto,Roberto Alves,+5511999990003,sim,2026-08-03,120.00,0,
+c-roberto,Roberto Alves,+5511999990003,sim,2026-08-17,120.00,0,
+c-roberto,Roberto Alves,+5511999990003,sim,2026-08-31,120.00,0,
+c-roberto,Roberto Alves,+5511999990003,sim,2026-09-14,120.00,0,"cliente VIP"
+c-helena,Helena Costa,+5511999990004,sim,2026-07-15,40.00,0,
+c-helena,Helena Costa,+5511999990004,sim,2026-07-25,40.00,0,
+c-helena,Helena Costa,+5511999990004,sim,2026-08-04,40.00,0,
+c-helena,Helena Costa,+5511999990004,sim,2026-08-14,40.00,0,
+c-carlos,Carlos Nunes,+5511999990005,nao,2026-09-10,50.00,0,"pediu para não receber"
+c-carlos,Carlos Nunes,+5511999990005,nao,2026-09-20,50.00,0,
+c-carlos,Carlos Nunes,+5511999990005,nao,2026-09-30,50.00,0,
+c-julia,Julia Rocha,+5511999990006,sim,2026-09-28,25.00,0,"primeira compra"
+c-pedro,Pedro Santos,+5511999990007,,2026-09-05,20.00,0,"sem opt-in registrado"
+c-pedro,Pedro Santos,+5511999990007,,2026-09-15,20.00,0,
+c-marina,"Silva, Marina",+5511999990008,sim,2026-08-30,"1.234,50",0,"cliente de alto ticket"
+c-marina,"Silva, Marina",+5511999990008,sim,2026-09-09,"1.234,50",0,
+c-marina,"Silva, Marina",+5511999990008,sim,2026-09-19,"1.234,50",0,
+c-marina,"Silva, Marina",+5511999990008,sim,2026-09-29,"1.234,50",0,
+c-lucas,Lucas Ferreira,+5511999990009,sim,2026-10-15,15.00,3,"três contatos sem resposta"
