@@ -20,6 +20,7 @@
     "package:source": "node scripts/package-source.mjs",
     "playground": "node --import tsx scripts/playground.ts",
     "scan": "node scripts/scan-injection.mjs",
+    "agent:report": "node scripts/agent-test-report.mjs",
     "sf:env": "node scripts/salesforce-env.mjs",
     "sf:seed": "node --import tsx scripts/salesforce-seed.mjs",
     "build:showcase": "vite build --config vite.showcase.config.ts",

@@ -60,6 +60,7 @@ Every verification command runs locally with **logical test isolation** and **ze
 | Command | What It Verifies |
 |---|---|
 | `npm test` | Runs the 47 deterministic & security challenges ([`scripts/run-challenges.ts`](scripts/run-challenges.ts)) plus all Node integration, parity, and hardening suites (`scripts/*.test.mjs`). |
+| `npm run agent:report -- <results.json>` | Normalizes an official Agentforce Studio test run (`sf agent test results --result-format json`) into a deterministic pass/fail report and exits non-zero on any failing scorer. |
 | `npm run scan` | Runs the static prompt-injection and invisible Unicode scanner ([`scripts/scan-injection.mjs`](scripts/scan-injection.mjs)) across all repository text and SVG files. |
 | `npm run lint` | Runs strict TypeScript (`tsc --noEmit`) verification across client, server, and evaluation harnesses. |
 | `npm run package:source` | Generates the sanitized source archive (`public/gina-training-lab-updated.zip`), stripping `.env*` files, `node_modules/`, build artifacts, and heavy design binaries. |
@@ -110,6 +111,7 @@ Gina separates **policy calculation** from **language explanation** across two i
    - `GinaCreateOwnerTaskAction` (`create_owner_task`): Re-evaluates the customer and inserts a single `Task` (`Status = 'Not Started'`) if eligible.
 2. **Caller-Scoped Permissions (`USER_MODE`):** `GinaService` reads `Contact` with `Security.stripInaccessible(AccessType.READABLE, ...)` and queries `Order` and `Task` `WITH USER_MODE`.
 3. **2GP Managed Package (`ginaintell`):** Packaged under the `ginaintell` namespace (`salesforce/sfdx-project.json`) with dynamic field resolution (`Contact.Gina_WhatsApp_Consent__c.getDescribe().getName()`) so field lookups work seamlessly with or without a namespace prefix.
+4. **Pre-Sales/SDR Topics:** The same agent also carries additive `salesforce_discovery`, `salesforce_solution`, and `salesforce_objection` topics (plus a shared knowledge base for the 2026 portfolio, editions, consumption models and talk tracks), guarded by a strict "never invent price/feature/case" policy and a human-handoff path. See [`docs/gina-presales-sdr.md`](docs/gina-presales-sdr.md).
 
 ### 3 Adversarial & Context-Engineering Defense
 
@@ -171,6 +173,7 @@ Running `npm test` executes the complete offline verification harness:
 | **Runtime & Loopback Hardening** | [`scripts/local-runtime.test.mjs`](scripts/local-runtime.test.mjs) · [`scripts/host-guard.test.mjs`](scripts/host-guard.test.mjs) | 12 | Loopback binding (`127.0.0.1`), DNS rebinding defense (`hostGuard`), `.env.local` isolation, and `/api/download-zip` sanitization. |
 | **Static Injection & Bundle Hygiene** | [`scripts/scan-injection.test.mjs`](scripts/scan-injection.test.mjs) · [`scripts/showcase.test.mjs`](scripts/showcase.test.mjs) | 6 | Zero unallowlisted command phrases or hidden Unicode in repo; zero secrets or internal prompts in `dist-showcase/`. |
 | **Salesforce Apex Suite** | `GinaRulesTest` · `GinaActionsTest` · `GinaJourneyTest` | 17 | **99% org coverage** across isolated rules, real DML under `Gina_Demo` permission sets, FLS denial fail-closed behavior, and multi-date customer journeys. |
+| **Agentforce Agent Suite** | [`salesforce/specs/GinaPresalesSDR-ngtTestSpec.yaml`](salesforce/specs/GinaPresalesSDR-ngtTestSpec.yaml) | 14 | Official Agentforce Studio (NGT) tests: subagent routing, Apex action match, rubric-scored discovery/solution/objection behavior, factuality/completeness, price and LGPD guardrails, off-topic handoff and prompt-injection defense. Run with `sf agent test run`; report with `npm run agent:report`. |
 
 ---
 
@@ -210,9 +213,10 @@ gina-training-lab/
 │   ├── showcase/                    # Zero-env bilingual public showcase (deployed to Vercel)
 │   └── components/                  # React 19 laboratory views (Scenarios, Training, Challenges, CRM)
 ├── salesforce/                      # Salesforce DX & 2GP Managed Package (namespace: ginaintell)
-│   ├── force-app/                   # GinaRules.cls, GinaService.cls, 3 Invocable Actions & Apex tests
-│   └── agent/                       # Agentforce employee agent bundle (Gina.agent) & permissions
-├── scripts/                         # Test suites (*.test.mjs), injection scanner & ZIP packager
+│   ├── force-app/                   # GinaRules.cls, GinaService.cls, 3 Invocable Actions, Apex tests & AiTestingDefinition
+│   ├── agent/                       # Agentforce employee agent bundle (Gina.agent: CRM + pre-sales topics) & permissions
+│   └── specs/                       # Agentforce Studio (NGT) agent-test spec (GinaPresalesSDR)
+├── scripts/                         # Test suites (*.test.mjs), injection scanner, agent-test report & ZIP packager
 ├── playground/                      # 6 canonical retail lifecycle & adversarial scenario specs
 └── docs/                            # Deep-dive technical documentation & visual case-study assets
 ```

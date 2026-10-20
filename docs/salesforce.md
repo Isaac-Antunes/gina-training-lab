@@ -93,6 +93,40 @@ sf org assign permset -n Gina_Agente -o gina-dev   # Grants access to the Agentf
 > [!IMPORTANT]
 > `sf agent publish` generates org-specific metadata under `aiAgents/` and `aiAgentDefinitionVersions/`. Both directories are intentionally excluded via `.gitignore` and `.forceignore`; the canonical source of truth is `aiAuthoringBundles/Gina/Gina.agent`.
 
+### Agent topics: CRM lifecycle + pre-sales/SDR
+
+The bundle runs two additive modes behind one router:
+
+| Topic (`subagent`) | Purpose |
+|---|---|
+| `customer_care` | CRM lifecycle: who needs attention, explain a decision, create one owner `Task` (unchanged) |
+| `salesforce_discovery` | Qualify a prospect before recommending; funnel and handoff signals |
+| `salesforce_solution` | Portfolio fit, editions, pricing policy, architecture, migration, complex problems |
+| `salesforce_objection` | Price, complexity, adoption, security/LGPD, incumbent CRM, competition |
+| `off_topic` | Scope defense for anything outside the two modes |
+
+The pre-sales knowledge (portfolio names as of 2026, editions, consumption models,
+ICP, discovery questions, objection matrices, talk tracks) is documented in
+[`gina-presales-sdr.md`](gina-presales-sdr.md). The underlying research notes (a
+PT-BR playbook and a public-site recon) are kept private and can be shown in a
+deep-dive; only the distilled agent behavior is published. The agent never invents
+price/feature/case data; unknown data is deferred to a specialist.
+
+> [!NOTE]
+> `sf agent publish authoring-bundle` resolves the authoring bundle from the
+> project's **default** package directory (`force-app`). This repository keeps
+> the bundle in the `agent/` package directory, so publishing requires moving the
+> bundle temporarily or adjusting `sfdx-project.json`. The canonical source stays
+> at `agent/main/default/aiAuthoringBundles/Gina/Gina.agent`.
+
+### Official Agentforce tests (NGT)
+
+The pre-sales mode is covered by the official Agentforce Studio test runner. The
+spec is [`salesforce/specs/GinaPresalesSDR-ngtTestSpec.yaml`](../salesforce/specs/GinaPresalesSDR-ngtTestSpec.yaml);
+see [`testes.md`](testes.md#agentforce-agent-tests-ngt) for the test matrix and
+commands, and `npm run agent:report -- <results.json>` for a deterministic local
+pass/fail report.
+
 ---
 
 ## 2GP Managed Package (`Gina Intell`)
