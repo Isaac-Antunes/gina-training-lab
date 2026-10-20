@@ -62,7 +62,12 @@ For a store that runs on a spreadsheet, a WhatsApp list or a lightweight CRM:
 1. **Minimal data contract** — customer name/ID, purchase or visit dates, amounts,
    consent status + evidence, and optional notes.
 2. **Weekly import** — CSV/XLSX (or a shared sheet) is validated, normalized and
-   deduplicated.
+   deduplicated. This mode is implemented and tested:
+   ```bash
+   npm run crm:queue -- playground/csv-exemplo-compras.csv --today 2026-10-19
+   ```
+   See [csv-import.md](csv-import.md) for the column schema, consent mapping,
+   flags and output format.
 3. **Deterministic queue** — the engine outputs a short, prioritized "who needs
    attention today" list with the reason and suggested action.
 4. **Human execution** — the owner reviews and contacts manually; the task/queue

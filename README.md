@@ -61,6 +61,7 @@ Every verification command runs locally with **logical test isolation** and **ze
 | Command | What It Verifies |
 |---|---|
 | `npm test` | Runs the 47 deterministic & security challenges ([`scripts/run-challenges.ts`](scripts/run-challenges.ts)) plus all Node integration, parity, and hardening suites (`scripts/*.test.mjs`). |
+| `npm run crm:queue -- <compras.csv> --today YYYY-MM-DD` | Spreadsheet/CSV import mode: validates a purchase export, applies the same deterministic engine and prints an owner-reviewed queue (no network, no LLM, no customer message). See [`docs/csv-import.md`](docs/csv-import.md). |
 | `npm run agent:report -- <results.json>` | Normalizes an official Agentforce Studio test run (`sf agent test results --result-format json`) into a deterministic pass/fail report and exits non-zero on any failing scorer. |
 | `npm run scan` | Runs the static prompt-injection and invisible Unicode scanner ([`scripts/scan-injection.mjs`](scripts/scan-injection.mjs)) across all repository text and SVG files. |
 | `npm run lint` | Runs strict TypeScript (`tsc --noEmit`) verification across client, server, and evaluation harnesses. |
@@ -138,7 +139,15 @@ Salesforce/Agentforce is the **reference implementation**, not the limit. Gina's
 | Google Sheets / Excel / ERP export | CSV/XLSX import | Review queue | **Import** |
 | WhatsApp lists / no CRM | Intake + sheet | Manual queue | **Manual** |
 
-What never changes: deterministic rhythm/VIP/dormancy/margin math, fail-closed consent, no autonomous customer messaging, one human-approved task/queue item, and the same adversarial/parity tests. What changes: field mapping, read/write paths, auth, consent semantics and adapter tests. See [`docs/crm-agnostic.md`](docs/crm-agnostic.md) for the full contract, boundaries and FAQ, and [`docs/mentoria-crm-agnostico.pt-BR.md`](docs/mentoria-crm-agnostico.pt-BR.md) for the PT-BR client one-pager.
+What never changes: deterministic rhythm/VIP/dormancy/margin math, fail-closed consent, no autonomous customer messaging, one human-approved task/queue item, and the same adversarial/parity tests. What changes: field mapping, read/write paths, auth, consent semantics and adapter tests.
+
+The simplest path is already runnable — a purchase spreadsheet in, a prioritized review queue out:
+
+```bash
+npm run crm:queue -- playground/csv-exemplo-compras.csv --today 2026-10-19
+```
+
+The queue uses the same engine and owner-task contract as Salesforce, shows blocked-by-consent customers separately, and ends with the invariant *Gina does not send messages*. See [`docs/crm-agnostic.md`](docs/crm-agnostic.md) for the full contract, boundaries and FAQ, [`docs/csv-import.md`](docs/csv-import.md) for the spreadsheet schema and flags, and [`docs/mentoria-crm-agnostico.pt-BR.md`](docs/mentoria-crm-agnostico.pt-BR.md) for the PT-BR client one-pager.
 
 ---
 
@@ -225,6 +234,7 @@ gina-training-lab/
 │   │   ├── challengeRunner.ts       # 47-case deterministic & adversarial evaluation harness
 │   │   └── hostGuard.ts             # Loopback Host-header validator (DNS rebinding defense)
 │   ├── integrations/salesforce/     # Read-only REST client, SOQL ID guard & idempotent Task writer
+│   ├── integrations/csv/            # Spreadsheet import: canonical mapping + owner review queue
 │   ├── welcome/                     # Signup consent-proof analyzer & channel fallback engine
 │   ├── showcase/                    # Zero-env bilingual public showcase (deployed to Vercel)
 │   └── components/                  # React 19 laboratory views (Scenarios, Training, Challenges, CRM)
@@ -232,8 +242,8 @@ gina-training-lab/
 │   ├── force-app/                   # GinaRules.cls, GinaService.cls, 3 Invocable Actions, Apex tests & AiTestingDefinition
 │   ├── agent/                       # Agentforce employee agent bundle (Gina.agent: CRM + pre-sales topics) & permissions
 │   └── specs/                       # Agentforce Studio (NGT) agent-test spec (GinaPresalesSDR)
-├── scripts/                         # Test suites (*.test.mjs), injection scanner, agent-test report & ZIP packager
-├── playground/                      # 6 canonical retail lifecycle & adversarial scenario specs
+├── scripts/                         # Test suites (*.test.mjs), CSV queue CLI, injection scanner, agent-test report & ZIP packager
+├── playground/                      # 6 scenario specs + csv-exemplo-compras.csv sample
 └── docs/                            # Deep-dive technical documentation & visual case-study assets
 ```
 

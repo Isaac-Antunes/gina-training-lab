@@ -24,6 +24,14 @@ com a mentoria do Isaac na implantação.
 | **Planilha, Google Sheets, ERP com exportação** | Modo importação: CSV/XLSX semanal | Fila de revisão priorizada, sem dashboard extra |
 | **Lista de WhatsApp / sem CRM** | Modo manual assistido: formulário + planilha | Rotina semanal de revisão e tarefas com trilha de auditoria |
 
+O modo planilha já está implementado e testado: um CSV de compras vira fila de revisão com o mesmo motor determinístico do Salesforce. Na prática:
+
+```bash
+npm run crm:queue -- compras.csv --today 2026-10-19
+```
+
+A saída separa quem pede ação (VIP primeiro), quem está bloqueado por consentimento e quem está em ritmo/descanso — sem enviar nada a ninguém.
+
 ## O que a mentoria entrega
 
 1. **Diagnóstico:** CRM atual, qualidade dos dados, prova de consentimento,

@@ -10,6 +10,7 @@ Each document in this directory addresses a specific architectural, safety, or o
 | [o-que-deu-errado.md](o-que-deu-errado.md) | What engineering failure modes occurred during 2GP packaging and how are they prevented? | Before packaging, publishing, or provisioning a new org. |
 | [salesforce.md](salesforce.md) | How do you connect a Salesforce org, publish the Agentforce bundle, and build a 2GP package? | When setting up local org integration or cutting package versions. |
 | [crm-agnostic.md](crm-agnostic.md) | How does the same decision layer run on other CRMs, spreadsheets and manual routines — and where are the boundaries? | Before positioning, scoping or onboarding a non-Salesforce stack. |
+| [csv-import.md](csv-import.md) | How do you turn a purchase spreadsheet into a deterministic review queue? | When onboarding a simple stack or running the spreadsheet demo. |
 | [mentoria-crm-agnostico.pt-BR.md](mentoria-crm-agnostico.pt-BR.md) | Client-facing one-pager (PT-BR) for the CRM-agnostic offer with mentorship. | When presenting to prospects or mentoring a team on a simple stack. |
 | `docs/assets/` | Visual architecture diagrams, character construction, and brand studies. | Reference assets for design and documentation. |
 
