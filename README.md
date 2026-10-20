@@ -61,7 +61,7 @@ Every verification command runs locally with **logical test isolation** and **ze
 | Command | What It Verifies |
 |---|---|
 | `npm test` | Runs the 47 deterministic & security challenges ([`scripts/run-challenges.ts`](scripts/run-challenges.ts)) plus all Node integration, parity, and hardening suites (`scripts/*.test.mjs`). |
-| `npm run crm:queue -- <compras.csv> --today YYYY-MM-DD` | Spreadsheet/CSV import mode: validates a purchase export, applies the same deterministic engine and prints an owner-reviewed queue (no network, no LLM, no customer message). See [`docs/csv-import.md`](docs/csv-import.md). |
+| `npm run crm:queue -- <compras.csv> --today YYYY-MM-DD` | Spreadsheet/CSV import mode: validates a purchase export, applies the same deterministic engine and prints an owner-reviewed queue (`md`, `html`, `whatsapp` or `csv`). `--require-proof` blocks consent without date + accepted text. No network, no LLM, no customer message. See [`docs/csv-import.md`](docs/csv-import.md). |
 | `npm run hubspot:queue -- <dataset.json> --today YYYY-MM-DD` | HubSpot adapter: maps contacts and closed-won deals to the same engine and prints the owner queue (offline fixture, or `--live` read-only with `HUBSPOT_ACCESS_TOKEN`). See [`docs/hubspot-adapter.md`](docs/hubspot-adapter.md). |
 | `npm run agent:report -- <results.json>` | Normalizes an official Agentforce Studio test run (`sf agent test results --result-format json`) into a deterministic pass/fail report and exits non-zero on any failing scorer. |
 | `npm run scan` | Runs the static prompt-injection and invisible Unicode scanner ([`scripts/scan-injection.mjs`](scripts/scan-injection.mjs)) across all repository text and SVG files. |
@@ -147,6 +147,7 @@ The simplest path is already runnable — a purchase spreadsheet (or a HubSpot e
 
 ```bash
 npm run crm:queue -- playground/csv-exemplo-compras.csv --today 2026-10-19
+npm run crm:queue -- playground/petshop-exemplo.csv --today 2026-10-19 --require-proof
 npm run hubspot:queue -- playground/hubspot-exemplo.json --today 2026-10-19
 ```
 
@@ -247,7 +248,7 @@ gina-training-lab/
 │   ├── agent/                       # Agentforce employee agent bundle (Gina.agent: CRM + pre-sales topics) & permissions
 │   └── specs/                       # Agentforce Studio (NGT) agent-test spec (GinaPresalesSDR)
 ├── scripts/                         # Test suites (*.test.mjs), CSV queue CLI, injection scanner, agent-test report & ZIP packager
-├── playground/                      # 6 scenario specs + csv-exemplo-compras.csv sample
+├── playground/                      # Scenario specs + CSV/HubSpot/pet-shop demo datasets
 └── docs/                            # Deep-dive technical documentation & visual case-study assets
 ```
 

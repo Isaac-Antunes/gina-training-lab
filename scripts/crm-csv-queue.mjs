@@ -20,7 +20,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import {
   importPurchaseCsv,
   renderQueueCsv,
+  renderQueueHtml,
   renderQueueMarkdown,
+  renderQueueWhatsApp,
 } from '../src/integrations/csv/purchaseCsv.ts';
 
 function usage() {
@@ -28,19 +30,20 @@ function usage() {
 
 Options:
   --today YYYY-MM-DD   Data de referência (padrão: hoje, UTC)
-  --format md|csv      Formato da saída (padrão: md)
+  --format md|csv|html|whatsapp  Formato da saída (padrão: md)
   --out PATH           Grava o relatório em arquivo em vez de imprimir
   --skip-invalid       Mantém linhas válidas e reporta as inválidas
+  --require-proof      Bloqueia consentimento 'granted' sem data + texto de prova
   --help               Mostra esta ajuda
 
 Exemplo de planilha (uma linha por compra):
-  cliente_id,nome,telefone,consentimento,data_compra,valor,contatos_ignorados,observacoes
+  cliente_id,nome,telefone,consentimento,consent_proof_at,consent_proof_text,data_compra,valor,contatos_ignorados,observacoes
   c-1,Ana Lima,+5511999990000,sim,2026-10-01,28.50,0,"compra na loja"
 `);
 }
 
 function parseArgs(argv) {
-  const args = { file: null, today: null, format: 'md', out: null, skipInvalid: false };
+  const args = { file: null, today: null, format: 'md', out: null, skipInvalid: false, requireProof: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') {
@@ -48,6 +51,8 @@ function parseArgs(argv) {
       process.exit(0);
     } else if (arg === '--skip-invalid') {
       args.skipInvalid = true;
+    } else if (arg === '--require-proof') {
+      args.requireProof = true;
     } else if (arg === '--today' || arg === '--format' || arg === '--out') {
       const value = argv[i + 1];
       if (!value || value.startsWith('--')) {
@@ -72,8 +77,8 @@ function parseArgs(argv) {
     usage();
     process.exit(2);
   }
-  if (!['md', 'csv'].includes(args.format)) {
-    console.error('--format must be "md" or "csv"');
+  if (!['md', 'csv', 'html', 'whatsapp'].includes(args.format)) {
+    console.error('--format must be md, csv, html or whatsapp');
     process.exit(2);
   }
   if (args.today && !/^\d{4}-\d{2}-\d{2}$/.test(args.today)) {
@@ -98,7 +103,11 @@ try {
   process.exit(2);
 }
 
-const result = importPurchaseCsv(csvText, { today, skipInvalid: args.skipInvalid });
+const result = importPurchaseCsv(csvText, {
+  today,
+  skipInvalid: args.skipInvalid,
+  requireConsentProof: args.requireProof,
+});
 
 for (const warning of result.queue.warnings) {
   console.error(`⚠ ${warning.line === null ? 'arquivo' : `linha ${warning.line}`}: ${warning.message}`);
@@ -111,7 +120,13 @@ if (result.errors.length > 0 && !args.skipInvalid) {
   process.exit(2);
 }
 
-const output = args.format === 'csv' ? renderQueueCsv(result) : renderQueueMarkdown(result);
+const output = args.format === 'csv'
+  ? renderQueueCsv(result)
+  : args.format === 'html'
+    ? renderQueueHtml(result)
+    : args.format === 'whatsapp'
+      ? renderQueueWhatsApp(result)
+      : renderQueueMarkdown(result);
 if (args.out) {
   writeFileSync(args.out, output, 'utf8');
   const actionable = result.queue.actionable.length;

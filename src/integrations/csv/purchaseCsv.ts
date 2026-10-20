@@ -17,18 +17,20 @@
 
 import { buildGinaCustomers } from '../salesforce/toGina';
 import type { SalesforceContact, SalesforceOrder } from '../salesforce/types';
-import { normalizeTextKey as normalizeHeader, parseAmount, parseFlexibleDate } from '../shared/parsing';
+import { normalizeTextKey as normalizeHeader, parseAmount, parseDateLike, parseFlexibleDate } from '../shared/parsing';
 import {
   buildReviewQueue,
   renderQueueCsv,
+  renderQueueHtml,
   renderQueueMarkdown,
+  renderQueueWhatsApp,
   type QueueIssue,
   type QueueWarning,
   type ReviewQueue,
 } from '../queue/reviewQueue';
 
 export type { QueueItem, QueueWarning, ReviewQueue } from '../queue/reviewQueue';
-export { buildReviewQueue, renderQueueCsv, renderQueueMarkdown } from '../queue/reviewQueue';
+export { buildReviewQueue, renderQueueCsv, renderQueueHtml, renderQueueMarkdown, renderQueueWhatsApp } from '../queue/reviewQueue';
 
 export { normalizeHeader, parseAmount, parseFlexibleDate };
 
@@ -47,6 +49,8 @@ export interface ImportOptions {
   today?: Date;
   /** Keep valid rows and report invalid ones instead of failing the whole file. */
   skipInvalid?: boolean;
+  /** Fail closed on `granted` consent without recorded proof (date + text). */
+  requireConsentProof?: boolean;
 }
 
 interface CsvRow {
@@ -66,6 +70,9 @@ interface PurchaseRow {
   name: string;
   phone: string;
   consent: CsvConsent;
+  proofAt: string | null;
+  proofText: string;
+  proofChannel: string;
   date: string;
   amount: number;
   ignored: number;
@@ -77,6 +84,9 @@ interface CustomerAggregate {
   name: string;
   phone: string;
   notes: string;
+  proofAt: string | null;
+  proofText: string;
+  proofChannel: string;
   consents: Set<CsvConsent>;
   ignored: number;
   rows: PurchaseRow[];
@@ -87,6 +97,9 @@ const HEADER_ALIASES: Record<string, string[]> = {
   name: ['name', 'nome', 'nome_cliente', 'cliente'],
   phone: ['phone', 'telefone', 'whatsapp', 'celular', 'fone'],
   consent: ['consent', 'consentimento', 'consent_status', 'status_consentimento', 'opt_in', 'optin'],
+  proofAt: ['consent_proof_at', 'prova_consentimento_at', 'data_prova', 'consent_at', 'opt_in_at'],
+  proofText: ['consent_proof_text', 'prova_consentimento_texto', 'texto_consentimento', 'consent_text'],
+  proofChannel: ['consent_channel', 'canal_consentimento', 'consent_proof_channel'],
   purchaseDate: ['purchase_date', 'data_compra', 'data_da_compra', 'data', 'order_date', 'orderdate', 'data_pedido'],
   amount: ['amount', 'valor', 'valor_compra', 'valor_total', 'total', 'price', 'preco'],
   ignored: ['recent_ignored_contacts', 'contatos_ignorados', 'ignorados', 'ignored_contacts', 'ignored'],
@@ -269,6 +282,13 @@ function parseRows(parsed: ParsedRows, errors: CsvError[], warnings: CsvWarning[
     if (!known && consentValue.trim()) {
       warnings.push({ line: row.line, message: `Consentimento "${consentValue}" não reconhecido; tratado como ausente (fail-closed).` });
     }
+    const proofAtRaw = cellAt(row, index, 'proofAt').trim();
+    const proofAt = proofAtRaw ? parseDateLike(proofAtRaw) : null;
+    if (proofAtRaw && !proofAt) {
+      warnings.push({ line: row.line, message: `Data de prova de consentimento inválida: "${proofAtRaw}".` });
+    }
+    const proofText = cellAt(row, index, 'proofText').trim();
+    const proofChannel = cellAt(row, index, 'proofChannel').trim();
     const ignoredRaw = cellAt(row, index, 'ignored').trim();
     const ignored = ignoredRaw ? Number.parseInt(ignoredRaw, 10) : 0;
     if (ignoredRaw && (!Number.isFinite(ignored) || ignored < 0)) {
@@ -281,6 +301,9 @@ function parseRows(parsed: ParsedRows, errors: CsvError[], warnings: CsvWarning[
       name: cellAt(row, index, 'name').trim(),
       phone: cellAt(row, index, 'phone').trim(),
       consent,
+      proofAt,
+      proofText,
+      proofChannel,
       date,
       amount,
       ignored: Number.isFinite(ignored) ? ignored : 0,
@@ -308,12 +331,18 @@ function aggregate(rows: PurchaseRow[], warnings: CsvWarning[]): CustomerAggrega
       if (row.notes) existing.notes = row.notes;
       existing.consents.add(row.consent);
       existing.ignored = Math.max(existing.ignored, row.ignored);
+      if (row.proofAt) existing.proofAt = row.proofAt;
+      if (row.proofText) existing.proofText = row.proofText;
+      if (row.proofChannel) existing.proofChannel = row.proofChannel;
     } else {
       byCustomer.set(row.customerId, {
         customerId: row.customerId,
         name: row.name,
         phone: row.phone,
         notes: row.notes,
+        proofAt: row.proofAt,
+        proofText: row.proofText,
+        proofChannel: row.proofChannel,
         consents: new Set([row.consent]),
         ignored: row.ignored,
         rows: [row],
@@ -331,6 +360,27 @@ function aggregate(rows: PurchaseRow[], warnings: CsvWarning[]): CustomerAggrega
     }
   }
   return customers;
+}
+
+/**
+ * LGPD hardening: a granted consent without recorded proof (date + accepted
+ * text) is downgraded to missing when `--require-proof` is on.
+ */
+function enforceConsentProof(
+  customers: CustomerAggregate[],
+  requireProof: boolean,
+  warnings: CsvWarning[],
+): void {
+  if (!requireProof) return;
+  for (const customer of customers) {
+    if (mostRestrictiveConsent(customer.consents) !== 'granted') continue;
+    if (customer.proofAt && customer.proofText) continue;
+    customer.consents.add('missing');
+    warnings.push({
+      line: null,
+      message: `Consentimento sem prova completa (data + texto) para ${customer.customerId}; tratado como ausente (--require-proof).`,
+    });
+  }
 }
 
 function toSalesforceShape(customers: CustomerAggregate[]): {
@@ -372,6 +422,7 @@ export function importPurchaseCsv(text: string, options: ImportOptions = {}): Im
   const warnings: CsvWarning[] = [];
   const rows = parseRows(parsed, errors, warnings);
   const customers = aggregate(rows, warnings);
+  enforceConsentProof(customers, options.requireConsentProof === true, warnings);
   const { contacts, orders } = toSalesforceShape(customers);
   const built = buildGinaCustomers(contacts, orders, today);
 
