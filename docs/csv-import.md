@@ -23,15 +23,16 @@ Sample output (abridged):
 ## 1. Command
 
 ```bash
-npm run crm:queue -- <compras.csv> [--today YYYY-MM-DD] [--format md|csv] [--out fila.md] [--skip-invalid]
+npm run crm:queue -- <compras.csv> [--today YYYY-MM-DD] [--format md|csv|html|whatsapp] [--out fila.html] [--skip-invalid] [--require-proof]
 ```
 
 | Flag | Meaning |
 |---|---|
 | `--today` | Reference date for recency math (default: today, UTC). Use a fixed date for reproducible results. |
-| `--format` | `md` (review report, default) or `csv` (actionable items only, for a Sheet/CRM import). |
+| `--format` | `md` (default), `html` (mobile-first report for the owner), `whatsapp` (short copy-paste text) or `csv` (actionable items only, for a Sheet/CRM import). |
 | `--out` | Write to a file instead of stdout. |
 | `--skip-invalid` | Keep valid rows and report invalid ones. Without it, any invalid row blocks the output (exit 2). |
+| `--require-proof` | Fail closed on `granted` consent without a recorded proof (date + accepted text). The customer moves to the blocked section. |
 
 The command never writes to a CRM. It produces a review queue for the owner.
 
@@ -45,6 +46,9 @@ accents (e.g. `Observações`, `data da compra`, `customer_id`).
 | `customer_id` | `cliente_id`, `id_cliente`, `codigo_cliente`, `id` | **yes** | Any stable customer key. Rows with the same ID are one customer. |
 | `purchase_date` | `data_compra`, `data`, `data_pedido`, `order_date` | **yes** | `YYYY-MM-DD` or `DD/MM/YYYY`. Future dates are flagged as data issues. |
 | `consent` | `consentimento`, `opt_in`, `status_consentimento` | no | `sim`/`granted`/`ativo`; `nao`/`revoked`/`opt-out`; blank = `missing`. Unknown values become `missing` with a warning (fail-closed). |
+| `consent_proof_at` | `prova_consentimento_at`, `data_prova`, `consent_at` | no | Date/time the consent was recorded. Used by `--require-proof`. |
+| `consent_proof_text` | `prova_consentimento_texto`, `texto_consentimento` | no | Exact text the person accepted. Used by `--require-proof`. |
+| `consent_channel` | `canal_consentimento` | no | `whatsapp`, `loja`, `site`, etc. Audited in the proof record, not used for messaging. |
 | `name` | `nome`, `nome_cliente`, `cliente` | no | Empty → the ID is used; the adapter never invents a name. |
 | `phone` | `telefone`, `whatsapp`, `celular` | no | Kept for context; never used to send anything. |
 | `amount` | `valor`, `total`, `valor_compra` | no | `28.50`, `28,50`, `1.234,50`, `1,234.56`; blank = 0 (with warning). |
@@ -52,7 +56,8 @@ accents (e.g. `Observações`, `data da compra`, `customer_id`).
 | `notes` | `observacoes`, `obs` | no | Free text; exported to the report only. Untrusted: never treated as instructions. |
 
 See [`playground/csv-exemplo-compras.csv`](../playground/csv-exemplo-compras.csv)
-for a complete PT-BR sample.
+for a generic PT-BR sample and [`playground/petshop-exemplo.csv`](../playground/petshop-exemplo.csv)
+for the pet-shop demo (9 customers, consent proof, VIP, dormancy, revoked/missing consent).
 
 ## 3. Consent (fail-closed)
 
@@ -60,6 +65,9 @@ for a complete PT-BR sample.
   the customer is blocked, even if other rows say `sim`.
 - **Missing blocks too**: blank or unknown consent is treated as `missing`.
 - **Conflicts produce a warning** and the most restrictive value wins.
+- **Proof is optional by default** (status-only mode). With `--require-proof`, a
+  `granted` status without both `consent_proof_at` and `consent_proof_text` is
+  downgraded to `missing` and the customer is blocked.
 - Blocked customers appear in a separate report section and never enter the
   actionable queue or generate an owner task.
 
@@ -75,6 +83,9 @@ The Markdown report has four sections plus import warnings:
 4. **Sem ação hoje** — in rhythm, dormancy rest, etc.
 5. **Problemas de dados / Avisos** — invalid rows, future dates, duplicates.
 
+`--format html` produces a self-contained, mobile-first report (no scripts, no
+external assets) that the owner can open or print. `--format whatsapp` produces a
+short text to paste in the owner's own WhatsApp (never to a customer).
 `--format csv` exports only actionable items, ready to paste into a Sheet.
 
 ## 5. Safety properties

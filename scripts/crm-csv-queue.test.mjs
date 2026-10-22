@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import {
   importPurchaseCsv,
@@ -6,7 +7,9 @@ import {
   parseAmount,
   parseFlexibleDate,
   renderQueueCsv,
+  renderQueueHtml,
   renderQueueMarkdown,
+  renderQueueWhatsApp,
 } from '../src/integrations/csv/purchaseCsv.ts';
 
 const TODAY = new Date('2026-10-19T00:00:00Z');
@@ -15,6 +18,12 @@ const header = 'cliente_id,nome,consentimento,data_compra,valor,contatos_ignorad
 
 function csv(...rows) {
   return [header, ...rows].join('\n');
+}
+
+const proofHeader = 'cliente_id,nome,consentimento,consent_proof_at,consent_proof_text,data_compra,valor,contatos_ignorados,observacoes';
+
+function proofCsv(...rows) {
+  return [proofHeader, ...rows].join('\n');
 }
 
 test('parses PT headers, Brazilian dates, comma decimals and quoted fields', () => {
@@ -144,4 +153,49 @@ test('renders actionable CSV with owner task subject and no customer messaging',
   assert.match(csvOut, /Normal,c-1,Ana,delay,friendly_nudge,granted/);
   assert.match(csvOut, /Gina: aprovar lembrete amigável/);
   assert.doesNotMatch(csvOut, /whatsapp|enviar mensagem/i);
+});
+
+test('require-proof fails closed when granted consent lacks date + text', () => {
+  const input = proofCsv(
+    'c-sem-prova,Ana,sim,,,2026-10-01,10.00,0,',
+    'c-com-prova,Bia,sim,2026-09-01,"aceitou o termo de contato",2026-10-01,10.00,0,',
+  );
+  const result = importPurchaseCsv(input, { today: TODAY, requireConsentProof: true });
+  assert.equal(result.queue.blocked.length, 1);
+  assert.equal(result.queue.blocked[0].customerId, 'c-sem-prova');
+  assert.equal(result.queue.blocked[0].consent, 'missing');
+  assert.ok(result.queue.warnings.some((warning) => /sem prova completa/.test(warning.message)));
+  assert.equal(result.queue.actionable.length, 1);
+  assert.equal(result.queue.actionable[0].customerId, 'c-com-prova');
+});
+
+test('HTML report escapes untrusted names and keeps the no-message invariant', () => {
+  const input = csv(
+    'c-x,"<script>alert(1)</script>",sim,2026-10-01,10.00,0,',
+  );
+  const result = importPurchaseCsv(input, { today: TODAY });
+  const html = renderQueueHtml(result);
+  assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(html, /A Gina não envia mensagens/);
+  const whatsapp = renderQueueWhatsApp(result);
+  assert.match(whatsapp, /A Gina não envia mensagens/);
+  assert.match(whatsapp, /fila de revisão/);
+});
+
+test('pet shop sample stays a valid, deterministic demo (default and require-proof)', () => {
+  const csvText = readFileSync(new URL('../playground/petshop-exemplo.csv', import.meta.url), 'utf8');
+  const result = importPurchaseCsv(csvText, { today: TODAY });
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.queue.customerCount, 9);
+  assert.equal(result.queue.actionable.length, 4);
+  assert.equal(result.queue.blocked.length, 2);
+  assert.equal(result.queue.silent.length, 3);
+  assert.equal(result.queue.actionable[0].customerId, 'c-roberto');
+  assert.equal(result.queue.actionable[0].classification, 'vip_delayed');
+  assert.equal(result.queue.actionable[0].priority, 'High');
+
+  const strict = importPurchaseCsv(csvText, { today: TODAY, requireConsentProof: true });
+  assert.equal(strict.queue.blocked.length, 3);
+  assert.ok(strict.queue.blocked.some((item) => item.customerId === 'c-semprova'));
 });
