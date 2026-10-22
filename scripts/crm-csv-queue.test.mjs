@@ -180,7 +180,17 @@ test('HTML report escapes untrusted names and keeps the no-message invariant', (
   assert.match(html, /A Gina não envia mensagens/);
   const whatsapp = renderQueueWhatsApp(result);
   assert.match(whatsapp, /A Gina não envia mensagens/);
-  assert.match(whatsapp, /fila de revisão/);
+  assert.match(whatsapp, /quem precisa de atenção/);
+});
+
+test('WhatsApp report speaks plain Portuguese: no internal codes, name not repeated', () => {
+  const csvText = readFileSync(new URL('../playground/petshop-exemplo.csv', import.meta.url), 'utf8');
+  const whatsapp = renderQueueWhatsApp(importPurchaseCsv(csvText, { today: TODAY }));
+  assert.doesNotMatch(whatsapp, /vip_delayed|new_customer|\bdelay\b|\b(granted|missing|revoked)\b/);
+  assert.match(whatsapp, /\*Roberto Alves\* — cliente VIP atrasado · prioridade alta/);
+  assert.match(whatsapp, /Costuma voltar a cada \d+ dias; última compra há \d+\./);
+  assert.match(whatsapp, /Carlos Nunes — pediu para não ser contatado/);
+  assert.doesNotMatch(whatsapp, /Sugestão: [^\n]*Roberto Alves/);
 });
 
 test('pet shop sample stays a valid, deterministic demo (default and require-proof)', () => {
