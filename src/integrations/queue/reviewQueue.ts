@@ -336,6 +336,25 @@ export function renderQueueHtml(result: QueueReport): string {
 `;
 }
 
+// Plain-language labels for the owner; internal codes stay in CSV/Markdown.
+const OWNER_LABEL: Record<string, string> = {
+  vip_delayed: 'cliente VIP atrasado',
+  delay: 'atrasado para voltar',
+  new_customer: 'cliente novo',
+  oneoff_delayed: 'só comprou uma vez',
+};
+
+const CONSENT_LABEL: Record<QueueItem['consent'], string> = {
+  granted: 'autorizou contato',
+  missing: 'sem autorização de contato',
+  revoked: 'pediu para não ser contatado',
+};
+
+function ownerRhythm(item: QueueItem): string {
+  if (item.medianIntervalDays === null) return `Última compra há ${item.recencyDays} dias.`;
+  return `Costuma voltar a cada ${item.medianIntervalDays} dias; última compra há ${item.recencyDays}.`;
+}
+
 /**
  * Short, copy-paste friendly text for WhatsApp (owner-to-owner, never customer).
  * It intentionally lists only the top items so the message stays readable.
@@ -343,18 +362,21 @@ export function renderQueueHtml(result: QueueReport): string {
 export function renderQueueWhatsApp(result: QueueReport, limit = 8): string {
   const { queue } = result;
   const lines: string[] = [];
-  lines.push(`*Gina — fila de revisão ${queue.referenceDate}*`);
-  lines.push(`${queue.customerCount} clientes avaliados · ${queue.actionable.length} pedem ação · ${queue.blocked.length} bloqueados`);
+  lines.push(`*Gina — quem precisa de atenção (${queue.referenceDate})*`);
+  lines.push(`${queue.customerCount} clientes avaliados · ${queue.actionable.length} pedem ação · ${queue.blocked.length} sem autorização de contato`);
   lines.push('');
   if (queue.actionable.length === 0) {
     lines.push('Nenhum cliente pede ação hoje.');
   } else {
     lines.push('*Precisa de ação:*');
     queue.actionable.slice(0, limit).forEach((item, index) => {
-      const why = item.priority === 'High'
-        ? `${item.classification} · prioridade alta`
-        : item.classification;
-      lines.push(`${index + 1}. ${item.name} — ${why}${item.task ? ` · ${item.task.Subject.replace(/^Gina:\s*/, '')}` : ''}`);
+      const label = OWNER_LABEL[item.classification] ?? item.classification;
+      const urgent = item.priority === 'High' ? ' · prioridade alta' : '';
+      lines.push(`${index + 1}. *${item.name}* — ${label}${urgent}`);
+      const suggestion = item.task
+        ? ` Sugestão: ${item.task.Subject.replace(/^Gina:\s*/, '').replace(/\s·\s[^·]*$/, '')}.`
+        : '';
+      lines.push(`   ${ownerRhythm(item)}${suggestion}`);
     });
     if (queue.actionable.length > limit) {
       lines.push(`… e mais ${queue.actionable.length - limit} cliente(s) no relatório completo.`);
@@ -362,12 +384,12 @@ export function renderQueueWhatsApp(result: QueueReport, limit = 8): string {
   }
   if (queue.blocked.length > 0) {
     lines.push('');
-    lines.push('*Bloqueados por consentimento:*');
+    lines.push('*Não contatar (sem autorização):*');
     queue.blocked.slice(0, limit).forEach((item) => {
-      lines.push(`- ${item.name} (${item.consent})`);
+      lines.push(`- ${item.name} — ${CONSENT_LABEL[item.consent]}`);
     });
   }
   lines.push('');
-  lines.push('_A Gina não envia mensagens. Revise e decida._');
+  lines.push('_A Gina não envia mensagens. Você revisa e decide._');
   return `${lines.join('\n')}\n`;
 }
