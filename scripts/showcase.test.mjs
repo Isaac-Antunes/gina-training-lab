@@ -4,6 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
+import { CONTACT_EMAIL as PUBLIC_EMAIL } from '../src/showcase/contact.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const outDir = path.join(root, 'dist-showcase');
@@ -27,7 +28,6 @@ const FORBIDDEN = [
 
 // Únicos arquivos que não são código: a imagem de prévia e as poses oficiais da Gina.
 const ALLOWED_ASSETS = ['gina-complete.png', 'gina-connect.png', 'gina-head.png', 'gina-intake.png', 'gina-organize.png', 'og-gina-en.jpg', 'og-gina.jpg'];
-const PUBLIC_EMAIL = 'iantunessp@gmail.com';
 
 async function listFiles(dir) {
   const out = [];

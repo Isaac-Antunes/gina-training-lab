@@ -1,8 +1,7 @@
 import React from 'react';
 import { ArrowUpRight, Linkedin, Mail } from 'lucide-react';
 import type { Lang } from '../welcome/analyzeSignup';
-
-const EMAIL = 'iantunessp@gmail.com';
+import { CONTACT_EMAIL } from './contact';
 
 const TEXT = {
   pt: {
@@ -28,7 +27,7 @@ const TEXT = {
 /** Chamada para contato ao fim da demonstração. Nenhum formulário: a vitrine não coleta dados pessoais. */
 export const ContactCta: React.FC<{ lang: Lang }> = ({ lang }) => {
   const t = TEXT[lang];
-  const mailto = `mailto:${EMAIL}?subject=${encodeURIComponent(t.subject)}`;
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t.subject)}`;
   const secondary =
     'inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full text-[#1E6B2E] hover:bg-[#14502a]/5 text-sm font-bold transition-colors';
 
@@ -57,7 +56,7 @@ export const ContactCta: React.FC<{ lang: Lang }> = ({ lang }) => {
           href={mailto}
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1E6B2E] hover:bg-[#14502a] text-[#f5f3ed] text-sm font-bold transition-colors"
         >
-          <Mail className="w-4 h-4" aria-hidden /> {EMAIL}
+          <Mail className="w-4 h-4" aria-hidden /> {CONTACT_EMAIL}
         </a>
         <a
           href="https://www.linkedin.com/in/isaacnandes/"
